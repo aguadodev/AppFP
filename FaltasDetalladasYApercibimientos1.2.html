@@ -1,0 +1,1852 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizador de Faltas de Asistencia con Apercibimientos y Comunicaciones</title>
+    
+    <!-- DataTables CSS y jQuery (locales) -->
+    <link rel="stylesheet" type="text/css" href="datatables/datatables.min.css"/>
+    <script type="text/javascript" src="datatables/jquery-3.7.1.min.js"></script>
+    <script type="text/javascript" src="datatables/datatables.min.js"></script>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .file-input {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .error {
+            color: #dc3545;
+            padding: 10px;
+            background-color: #f8d7da;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #155724;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .warning {
+            color: #856404;
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+            padding: 10px;
+            text-align: left;
+        }
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #dee2e6;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 10px 20px;
+            background-color: #e9ecef;
+            cursor: pointer;
+            border: 1px solid #dee2e6;
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 4px 4px 0 0;
+        }
+        .tab.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .stats-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .stats {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            flex: 1;
+        }
+        .print-button {
+            background-color: #6f42c1;
+            margin-left: 20px;
+            white-space: nowrap;
+        }
+        .print-button:hover {
+            background-color: #5a32a3;
+        }
+        .print-button:disabled {
+            background-color: #6c757d;
+        }
+        .table-container {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .celda-normal {
+            background-color: transparent;
+        }
+        .celda-apercibimiento-pendiente {
+            background-color: #fd7e14 !important; /* Naranja */
+            color: white;
+            font-weight: bold;
+        }
+        .celda-apercibimiento-enviado {
+            background-color: #fff3cd !important; /* Amarillo más claro */
+            font-weight: bold;
+        }
+        .celda-comunicacion-pendiente {
+            background-color: #dc3545 !important; /* Rojo */
+            color: white;
+            font-weight: bold;
+        }
+        .celda-comunicacion-enviada {
+            background-color: #000000 !important; /* Negro */
+            color: white !important;
+            font-weight: bold;
+        }
+        .info-modulos {
+            background-color: #d1ecf1;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .cargando {
+            color: #007bff;
+            font-style: italic;
+        }
+        .umbral-info {
+            font-size: 0.85em;
+            color: #666;
+            font-weight: normal;
+            display: block;
+        }
+        .encoding-info {
+            background-color: #fff3cd;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+        .auto-load-info {
+            background-color: #cce5ff;
+            border: 1px solid #b8daff;
+            color: #004085;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .fecha-info {
+            font-size: 0.85em;
+            color: #666;
+        }
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .action-button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .action-button:hover {
+            background-color: #218838;
+        }
+        .action-button.warning {
+            background-color: #ffc107;
+            color: #000;
+        }
+        .action-button.warning:hover {
+            background-color: #e0a800;
+        }
+        .action-button.danger {
+            background-color: #dc3545;
+        }
+        .action-button.danger:hover {
+            background-color: #c82333;
+        }
+        .counter-badge {
+            background-color: #007bff;
+            color: white;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+        .leyenda-colores {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .color-muestra {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+            border: 1px solid #ccc;
+        }
+        .header-with-button {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .controls-section {
+            transition: opacity 0.3s ease;
+        }
+        .controls-section.hidden {
+            opacity: 0;
+            height: 0;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        .dataTables_wrapper {
+            padding: 10px;
+        }
+        .dataTables_length, .dataTables_filter {
+            margin-bottom: 10px;
+        }
+        .dataTables_info {
+            margin-top: 10px;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+        @media print {
+            .page-break {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Analizador de Faltas de Asistencia con Apercibimientos y Comunicaciones</h1>
+        
+        <div id="autoLoadInfo" class="auto-load-info">
+            <!-- Este div se mantiene oculto por defecto -->
+        </div>
+        
+        <div class="controls-section" id="controlsSection">
+            <div class="file-input">
+                <label><strong>Archivo de módulos:</strong></label><br>
+                <input type="file" id="modulosFileInput" accept=".csv" onchange="loadModulosFile(event)">
+                <div id="modulosInfo" class="info-modulos" style="display: none;">
+                    Módulos cargados: <span id="modulosCargados">0</span>
+                </div>
+            </div>
+            
+            <div class="file-input">
+                <label><strong>Archivo de apercibimientos y comunicaciones previas (opcional):</strong></label><br>
+                <input type="file" id="apercibimientosPreviosInput" accept=".csv" onchange="loadApercibimientosPreviosFile(event)">
+                <div id="apercPreviosInfo" class="info-modulos" style="display: none; background-color: #d4edda;">
+                    Registros previos cargados: <span id="apercPreviosCargados">0</span>
+                </div>
+            </div>
+            
+            <div class="file-input">
+                <label><strong>Archivo de faltas (texto desde PDF):</strong></label><br>
+                <input type="file" id="faltasFileInput" accept=".txt,.csv,text/plain">
+            </div>
+            
+            <textarea id="inputText" rows="10" placeholder="Pega aquí el contenido del archivo de faltas..."></textarea>
+            
+            <button onclick="processInput()" id="processBtn">Procesar</button>
+            <button onclick="clearAll()">Limpiar</button>
+        </div>
+        
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="success" class="success" style="display: none;"></div>
+        <div id="warning" class="warning" style="display: none;"></div>
+        
+        <div class="stats-container">
+            <div class="stats" id="stats" style="display: none;">
+                <strong>Estadísticas:</strong> 
+                <span id="totalFaltas">0</span> faltas totales · 
+                <span id="totalAlumnos">0</span> alumnos · 
+                <span id="totalModulos">0</span> módulos
+            </div>
+            <button class="print-button" onclick="generarInformeImpresion()" id="printBtn" disabled>🖨️ Generar Informe para Imprimir</button>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('modulos')">📚 1. Módulos y Umbrales</div>
+            <div class="tab" onclick="showTab('faltasDetalladas')">📋 2. Faltas Detalladas</div>
+            <div class="tab" onclick="showTab('resumen')">📊 3. Tabla Resumen</div>
+            <div class="tab" onclick="showTab('apercibimientos')">⚠️ 4. Apercibimientos (6%)</div>
+            <div class="tab" onclick="showTab('comunicaciones')">📢 5. Comunicaciones PD (4%)</div>
+        </div>
+        
+        <div id="modulosTab" class="tab-content active">
+            <h3>Módulos y Umbrales</h3>
+            <div class="encoding-info">
+                ✅ Los nombres de módulos se muestran correctamente (codificación UTF-8)
+            </div>
+            <div class="info-modulos">
+                <p><strong>Cálculo de sesiones:</strong> Cada sesión = 50 minutos · Horas totales × 60 ÷ 50 = sesiones (con 1 decimal)</p>
+                <p><strong>Umbral Comunicación PD (4%):</strong> floor(sesiones × 0.04) + 1</p>
+                <p><strong>Umbral Apercibimiento PD (6%):</strong> floor(sesiones × 0.06) + 1</p>
+            </div>
+            <div class="table-container">
+                <table id="modulosTable" class="display">
+                    <thead>
+                        <tr>
+                            <th>Módulo</th>
+                            <th>Horas</th>
+                            <th>Sesiones (50')</th>
+                            <th>Umbral 6% (Apercibimiento)</th>
+                            <th>Umbral 4% (Comunicación)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modulosBody">
+                        <tr><td colspan="5" style="text-align: center;">Use el selector para cargar módulos</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="faltasDetalladasTab" class="tab-content">
+            <div class="header-with-button">
+                <h3>📋 Faltas Detalladas</h3>
+                <button class="action-button" onclick="downloadCSV()" id="downloadBtn" disabled>📥 Descargar CSV</button>
+            </div>
+            <div class="table-container">
+                <table id="faltasDetalladasTable" class="display">
+                    <thead>
+                        <tr>
+                            <th>Apellidos</th>
+                            <th>Nombre</th>
+                            <th>Fecha</th>
+                            <th>Hora</th>
+                            <th>Módulo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="faltasDetalladasBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="resumenTab" class="tab-content">
+            <div class="header-with-button">
+                <h3>📊 Resumen de Faltas por Alumno y Módulo</h3>
+                <button class="action-button" onclick="downloadResumenCSV()" id="downloadResumenBtn" disabled>📥 Descargar CSV</button>
+            </div>
+            <div class="leyenda-colores">
+                <div><span class="color-muestra" style="background-color: transparent; border: 1px solid #ccc;"></span> Sin apercibimiento (&lt;6%)</div>
+                <div><span class="color-muestra" style="background-color: #fd7e14;"></span> 🔶 Apercibimiento pendiente (≥6% no enviado)</div>
+                <div><span class="color-muestra" style="background-color: #fff3cd;"></span> 🟡 Apercibimiento enviado (esperando 4%)</div>
+                <div><span class="color-muestra" style="background-color: #dc3545;"></span> 🔴 Comunicación pendiente (≥4% desde último apercibimiento)</div>
+                <div><span class="color-muestra" style="background-color: #000000;"></span> ⚫ Comunicación ya enviada</div>
+            </div>
+            <div class="table-container">
+                <table id="resumenTable" class="display">
+                    <thead>
+                        <tr id="tableHeader">
+                            <th>Alumno</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="apercibimientosTab" class="tab-content">
+            <div class="action-bar">
+                <h3 style="margin: 0;">⚠️ Apercibimientos (≥6% de faltas)</h3>
+                <div id="apercibimientosButtonContainer">
+                    <!-- El botón se insertará aquí dinámicamente si hay pendientes -->
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="apercibimientosTable" class="display">
+                    <thead>
+                        <tr>
+                            <th>Apellidos y Nombre</th>
+                            <th>Materia/Módulo</th>
+                            <th>Faltas</th>
+                            <th>% sobre total sesiones</th>
+                            <th>Umbral 6%</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="apercibimientosBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="comunicacionesTab" class="tab-content">
+            <div class="action-bar">
+                <h3 style="margin: 0;">📢 Comunicaciones PD (4% desde último apercibimiento)</h3>
+                <div id="comunicacionesButtonContainer">
+                    <!-- El botón se insertará aquí dinámicamente si hay pendientes -->
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="comunicacionesTable" class="display">
+                    <thead>
+                        <tr>
+                            <th>Apellidos y Nombre</th>
+                            <th>Materia/Módulo</th>
+                            <th>Fecha último apercibimiento</th>
+                            <th>Faltas desde entonces</th>
+                            <th>% desde último apercibimiento</th>
+                            <th>Umbral 4%</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="comunicacionesBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de DataTables en español (local)
+        const datatableSpanish = {
+            "sProcessing": "Procesando...",
+            "sLengthMenu": "Mostrar _MENU_ registros",
+            "sZeroRecords": "No se encontraron resultados",
+            "sEmptyTable": "Ningún dato disponible en esta tabla",
+            "sInfo": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
+            "sInfoEmpty": "Mostrando registros del 0 al 0 de un total de 0 registros",
+            "sInfoFiltered": "(filtrado de un total de _MAX_ registros)",
+            "sInfoPostFix": "",
+            "sSearch": "Buscar:",
+            "sUrl": "",
+            "sInfoThousands": ",",
+            "sLoadingRecords": "Cargando...",
+            "oPaginate": {
+                "sFirst": "Primero",
+                "sLast": "Último",
+                "sNext": "Siguiente",
+                "sPrevious": "Anterior"
+            },
+            "oAria": {
+                "sSortAscending": ": Activar para ordenar la columna de manera ascendente",
+                "sSortDescending": ": Activar para ordenar la columna de manera descendente"
+            }
+        };
+
+        // Variables globales
+        let faltasData = [];
+        let alumnos = new Set();
+        let alumnosDetalle = {};
+        let modulos = new Set();
+        let matrizResumen = {};
+        let lines = [];
+        
+        // Datos de módulos desde CSV
+        let modulosData = {};
+        let sesionesPorModulo = {};
+        let umbralesPorModulo = {};
+        
+        // Datos de apercibimientos y comunicaciones previas
+        let apercibimientosPrevios = new Set(); // Formato: "alumno|modulo" (en minúsculas para comparación)
+        let comunicacionesPrevias = new Set(); // Formato: "alumno|modulo" para comunicaciones ya enviadas
+        let apercibimientosPreviosDetalle = [];
+        let apercibimientosPorAlumnoModulo = {}; // Mapa para acceso rápido a fecha de acuse de apercibimientos
+        
+        // Datos calculados
+        let apercibimientosPendientes = []; // Apercibimientos no enviados (≥6%)
+        let comunicacionesPendientes = []; // Comunicaciones no enviadas (≥4% desde último apercibimiento)
+        
+        // Mapeo de nombres de módulos (para coincidencias aproximadas)
+        let moduloMapping = {};
+        
+        // Contenido original del archivo de apercibimientos (para concatenar)
+        let contenidoOriginalApercibimientos = '';
+        
+        // Configuración
+        const SESION_MINUTOS = 50;
+
+        // Eliminada la carga automática de archivos por defecto debido a errores CORS
+
+        function fixEncoding(text) {
+            return text
+                .replace(/Ã±/g, 'ñ')
+                .replace(/Ã¡/g, 'á')
+                .replace(/Ã©/g, 'é')
+                .replace(/Ã­/g, 'í')
+                .replace(/Ã³/g, 'ó')
+                .replace(/Ãº/g, 'ú')
+                .replace(/Ã¼/g, 'ü')
+                .replace(/Ã‘/g, 'Ñ')
+                .replace(/Ã/g, 'Á')
+                .replace(/Ã‰/g, 'É')
+                .replace(/Ã/g, 'Í')
+                .replace(/Ã“/g, 'Ó')
+                .replace(/Ãš/g, 'Ú')
+                .replace(/Ãœ/g, 'Ü')
+                .replace(/Â/g, '');
+        }
+
+        function normalizeString(str) {
+            if (!str) return '';
+            return str.toLowerCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quitar acentos
+                .trim();
+        }
+
+        function parseDate(dateStr) {
+            // Formato esperado: DD/MM/YYYY
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+                return new Date(parts[2], parts[1] - 1, parts[0]);
+            }
+            return null;
+        }
+
+        function getCurrentDateFormatted() {
+            const today = new Date();
+            const day = String(today.getDate()).padStart(2, '0');
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const year = today.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        function getCurrentDateForFilename() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function loadModulosFile(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    let result = e.target.result;
+                    if (result.includes('Ã±') || result.includes('Ã³') || result.includes('Ã¡')) {
+                        result = fixEncoding(result);
+                    }
+                    parseModulosCSV(result);
+                };
+                reader.readAsText(file, 'ISO-8859-1');
+            }
+        }
+
+        function loadApercibimientosPreviosFile(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    let result = e.target.result;
+                    if (result.includes('Ã±') || result.includes('Ã³') || result.includes('Ã¡')) {
+                        result = fixEncoding(result);
+                    }
+                    contenidoOriginalApercibimientos = result;
+                    parseApercibimientosPreviosCSV(result);
+                };
+                reader.readAsText(file, 'ISO-8859-1');
+            }
+        }
+
+        function parseApercibimientosPreviosCSV(csvText) {
+            const lines = csvText.split('\n');
+            apercibimientosPrevios.clear();
+            comunicacionesPrevias.clear();
+            apercibimientosPreviosDetalle = [];
+            apercibimientosPorAlumnoModulo = {};
+            
+            // Saltar cabecera
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line === '') continue;
+                
+                const fields = [];
+                let currentField = '';
+                let inQuotes = false;
+                
+                for (let j = 0; j < line.length; j++) {
+                    const char = line[j];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        fields.push(currentField);
+                        currentField = '';
+                    } else {
+                        currentField += char;
+                    }
+                }
+                fields.push(currentField);
+                
+                if (fields.length >= 7) {
+                    const tipo = fields[0].trim();
+                    const dataInforme = fields[1].trim();
+                    const dataAcuse = fields[2].trim();
+                    const apellido1 = fields[3].trim();
+                    const apellido2 = fields[4].trim();
+                    const nome = fields[5].trim();
+                    const materia = fields[6].trim();
+                    
+                    // Construir nombre completo (formato: "Apellido1 Apellido2, Nombre")
+                    const nombreCompleto = `${apellido1} ${apellido2}, ${nome}`;
+                    
+                    // Buscar el módulo real en el mapping
+                    const moduloReal = findModuloInMapping(materia);
+                    const modulo = moduloReal || materia;
+                    
+                    // Guardar según el tipo
+                    const keyBase = `${normalizeString(nombreCompleto)}|${normalizeString(modulo)}`;
+                    
+                    if (tipo.includes('Apercibimento')) {
+                        apercibimientosPrevios.add(keyBase);
+                        
+                        // Guardar el detalle con fecha de acuse
+                        const acuseDate = parseDate(dataAcuse);
+                        
+                        apercibimientosPreviosDetalle.push({
+                            tipo,
+                            dataInforme,
+                            dataAcuse,
+                            fechaAcuse: acuseDate,
+                            apellido1,
+                            apellido2,
+                            nome,
+                            materia: modulo,
+                            nombreCompleto
+                        });
+                        
+                        // Guardar en mapa para acceso rápido (si hay múltiples, nos quedamos con la más reciente)
+                        const existing = apercibimientosPorAlumnoModulo[keyBase];
+                        if (!existing || (acuseDate && (!existing.fechaAcuse || acuseDate > existing.fechaAcuse))) {
+                            apercibimientosPorAlumnoModulo[keyBase] = {
+                                fechaAcuse: acuseDate,
+                                dataAcuse,
+                                dataInforme,
+                                tipo
+                            };
+                        }
+                    } else if (tipo.includes('Comunicación')) {
+                        comunicacionesPrevias.add(keyBase);
+                    }
+                }
+            }
+            
+            document.getElementById('apercPreviosCargados').textContent = lines.length - 1; // Total registros
+            document.getElementById('apercPreviosInfo').style.display = 'block';
+            
+            showSuccess(`Cargados ${lines.length - 1} registros previos (${apercibimientosPrevios.size} apercibimientos, ${comunicacionesPrevias.size} comunicaciones).`);
+            
+            if (faltasData.length > 0) {
+                recalcularTodo();
+            }
+        }
+
+        function normalizeModuloName(name) {
+            if (!name) return '';
+            
+            let normalized = name
+                .toLowerCase()
+                .replace(/[áàäâ]/g, 'a')
+                .replace(/[éèëê]/g, 'e')
+                .replace(/[íìïî]/g, 'i')
+                .replace(/[óòöô]/g, 'o')
+                .replace(/[úùüû]/g, 'u')
+                .replace(/ñ/g, 'n')
+                .replace(/ç/g, 'c')
+                .replace(/[\(\)]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+            
+            return normalized;
+        }
+
+        function parseModulosCSV(csvText) {
+            const lines = csvText.split('\n');
+            modulosData = {};
+            sesionesPorModulo = {};
+            umbralesPorModulo = {};
+            moduloMapping = {};
+            
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line === '') continue;
+                
+                const fields = [];
+                let currentField = '';
+                let inQuotes = false;
+                
+                for (let j = 0; j < line.length; j++) {
+                    const char = line[j];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        fields.push(currentField);
+                        currentField = '';
+                    } else {
+                        currentField += char;
+                    }
+                }
+                fields.push(currentField);
+                
+                if (fields.length >= 5) {
+                    const curso = fields[0].trim();
+                    const codigo = fields[1].trim();
+                    let nome = fields[2].trim();
+                    const horas = parseFloat(fields[3].trim()) || 0;
+                    const periodos = parseInt(fields[4].trim()) || 0;
+                    
+                    nome = nome.replace(/"/g, '').trim();
+                    
+                    const sesionesTotales = (horas * 60) / SESION_MINUTOS;
+                    const umbral6 = Math.floor(sesionesTotales * 0.06) + 1;
+                    const umbral4 = Math.floor(sesionesTotales * 0.04) + 1;
+                    
+                    modulosData[nome] = {
+                        curso,
+                        codigo,
+                        nome,
+                        horas,
+                        periodos,
+                        sesionesTotales: sesionesTotales.toFixed(1),
+                        sesionesNumero: sesionesTotales,
+                        umbral6,
+                        umbral4
+                    };
+                    
+                    sesionesPorModulo[nome] = sesionesTotales;
+                    umbralesPorModulo[nome] = { umbral6, umbral4 };
+                    
+                    const nomeNormalized = normalizeModuloName(nome);
+                    moduloMapping[nomeNormalized] = nome;
+                    
+                    const semParentesis = nome.replace(/[\(\)]/g, '').trim();
+                    moduloMapping[normalizeModuloName(semParentesis)] = nome;
+                    
+                    const palabras = nomeNormalized.split(' ').filter(p => p.length > 3);
+                    palabras.forEach(palabra => {
+                        moduloMapping[palabra] = nome;
+                    });
+                }
+            }
+            
+            document.getElementById('modulosCargados').textContent = Object.keys(modulosData).length;
+            document.getElementById('modulosInfo').style.display = 'block';
+            
+            displayModulosTable();
+            
+            showSuccess(`Cargados ${Object.keys(modulosData).length} módulos desde el CSV.`);
+        }
+
+        function findModuloInMapping(moduloName) {
+            if (!moduloName) return null;
+            
+            if (sesionesPorModulo[moduloName]) {
+                return moduloName;
+            }
+            
+            const normalized = normalizeModuloName(moduloName);
+            
+            if (moduloMapping[normalized]) {
+                return moduloMapping[normalized];
+            }
+            
+            for (let [key, value] of Object.entries(moduloMapping)) {
+                if (normalized.includes(key) || key.includes(normalized)) {
+                    return value;
+                }
+            }
+            
+            for (let realName of Object.keys(sesionesPorModulo)) {
+                const realNormalized = normalizeModuloName(realName);
+                if (normalized.includes(realNormalized) || realNormalized.includes(normalized)) {
+                    return realName;
+                }
+            }
+            
+            return null;
+        }
+
+        function displayModulosTable() {
+            let body = '';
+            const modulosOrdenados = Object.keys(modulosData).sort();
+            
+            modulosOrdenados.forEach(nome => {
+                const m = modulosData[nome];
+                body += `<tr>
+                    <td><strong>${m.nome}</strong></td>
+                    <td style="text-align: center;">${m.horas}</td>
+                    <td style="text-align: center;">${m.sesionesTotales}</td>
+                    <td style="text-align: center; font-weight: bold; color: #dc3545;">${m.umbral6}</td>
+                    <td style="text-align: center; font-weight: bold; color: #fd7e14;">${m.umbral4}</td>
+                </tr>`;
+            });
+            
+            document.getElementById('modulosBody').innerHTML = body;
+            
+            // Inicializar DataTable
+            if ($.fn.DataTable) {
+                if ($.fn.DataTable.isDataTable('#modulosTable')) {
+                    $('#modulosTable').DataTable().destroy();
+                }
+                $('#modulosTable').DataTable({
+                    language: datatableSpanish,
+                    pageLength: 100,
+                    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+                    order: [[0, 'asc']]
+                });
+            }
+        }
+
+        document.getElementById('faltasFileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    let content = e.target.result;
+                    if (content.includes('Ã±') || content.includes('Ã³')) {
+                        content = fixEncoding(content);
+                    }
+                    document.getElementById('inputText').value = content;
+                };
+                reader.readAsText(file, 'ISO-8859-1');
+            }
+        });
+
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            
+            if (tabName === 'modulos') {
+                document.querySelector('.tab').classList.add('active');
+                document.getElementById('modulosTab').classList.add('active');
+            } else if (tabName === 'faltasDetalladas') {
+                document.querySelectorAll('.tab')[1].classList.add('active');
+                document.getElementById('faltasDetalladasTab').classList.add('active');
+            } else if (tabName === 'resumen') {
+                document.querySelectorAll('.tab')[2].classList.add('active');
+                document.getElementById('resumenTab').classList.add('active');
+            } else if (tabName === 'apercibimientos') {
+                document.querySelectorAll('.tab')[3].classList.add('active');
+                document.getElementById('apercibimientosTab').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab')[4].classList.add('active');
+                document.getElementById('comunicacionesTab').classList.add('active');
+            }
+        }
+
+        function clearAll() {
+            document.getElementById('inputText').value = '';
+            document.getElementById('faltasFileInput').value = '';
+            document.getElementById('modulosFileInput').value = '';
+            document.getElementById('apercibimientosPreviosInput').value = '';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('success').style.display = 'none';
+            document.getElementById('warning').style.display = 'none';
+            document.getElementById('stats').style.display = 'none';
+            document.getElementById('apercPreviosInfo').style.display = 'none';
+            
+            document.getElementById('downloadBtn').disabled = true;
+            document.getElementById('downloadResumenBtn').disabled = true;
+            document.getElementById('printBtn').disabled = true;
+            
+            document.getElementById('faltasDetalladasBody').innerHTML = '';
+            document.getElementById('tableBody').innerHTML = '';
+            document.getElementById('tableHeader').innerHTML = '<th>Alumno</th>';
+            document.getElementById('apercibimientosBody').innerHTML = '';
+            document.getElementById('comunicacionesBody').innerHTML = '';
+            
+            document.getElementById('apercibimientosButtonContainer').innerHTML = '';
+            document.getElementById('comunicacionesButtonContainer').innerHTML = '';
+            
+            document.getElementById('controlsSection').classList.remove('hidden');
+            
+            faltasData = [];
+            alumnos.clear();
+            alumnosDetalle = {};
+            modulos.clear();
+            matrizResumen = {};
+            lines = [];
+            apercibimientosPendientes = [];
+            comunicacionesPendientes = [];
+            
+            // Destruir DataTables si existen
+            if ($.fn.DataTable) {
+                if ($.fn.DataTable.isDataTable('#faltasDetalladasTable')) {
+                    $('#faltasDetalladasTable').DataTable().destroy();
+                }
+                if ($.fn.DataTable.isDataTable('#resumenTable')) {
+                    $('#resumenTable').DataTable().destroy();
+                }
+                if ($.fn.DataTable.isDataTable('#apercibimientosTable')) {
+                    $('#apercibimientosTable').DataTable().destroy();
+                }
+                if ($.fn.DataTable.isDataTable('#comunicacionesTable')) {
+                    $('#comunicacionesTable').DataTable().destroy();
+                }
+            }
+        }
+
+        function processInput() {
+            const input = document.getElementById('inputText').value;
+            if (!input.trim()) {
+                showError('Por favor, introduce texto o selecciona un archivo de faltas.');
+                return;
+            }
+
+            if (Object.keys(modulosData).length === 0) {
+                showWarning('No hay módulos cargados. Los apercibimientos no se calcularán correctamente.');
+            }
+
+            try {
+                lines = input.split('\n');
+                faltasData = [];
+                alumnos.clear();
+                alumnosDetalle = {};
+                modulos.clear();
+                
+                let currentStudent = '';
+                let currentStudentFull = '';
+                
+                for (let i = 0; i < lines.length; i++) {
+                    let line = lines[i].trimRight();
+                    
+                    if (line === '') continue;
+                    
+                    if (line.includes('Centro Educativo') ||
+                        line.includes('CdCentro') ||
+                        line.includes('Dirección Centro') ||
+                        line.includes('Teléfono') ||
+                        line.includes('email') ||
+                        line.includes('web') ||
+                        line.includes('Lista detallada') ||
+                        line.includes('Graos D:') ||
+                        line.includes('1º Desenvolvemento') ||
+                        line.includes('Dende:') ||
+                        line.includes('Apelidos e nome') ||
+                        line.includes('Páxina') ||
+                        line.match(/^Data \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/)) {
+                        continue;
+                    }
+                    
+                    const studentMatch = line.match(/^(.+?, [^,]+?)(?=\s+\d{2}\/\d{2}\/\d{4})/);
+                    
+                    if (studentMatch) {
+                        currentStudentFull = studentMatch[1].trim();
+                        
+                        const nameParts = currentStudentFull.split(',');
+                        if (nameParts.length === 2) {
+                            const apellidos = nameParts[0].trim();
+                            const nombre = nameParts[1].trim();
+                            
+                            alumnosDetalle[currentStudentFull] = {
+                                apellidos,
+                                nombre
+                            };
+                        }
+                        
+                        alumnos.add(currentStudentFull);
+                        
+                        const faltaPart = line.substring(studentMatch[0].length).trim();
+                        if (faltaPart) {
+                            i = processFaltaLineWithContext(currentStudentFull, faltaPart, i);
+                        }
+                    } 
+                    else if (currentStudentFull && line.match(/\d{2}\/\d{2}\/\d{4}/)) {
+                        i = processFaltaLineWithContext(currentStudentFull, line, i);
+                    }
+                }
+                
+                if (faltasData.length === 0) {
+                    showError('No se pudieron extraer datos. Verifica que el formato sea correcto.');
+                    return;
+                }
+                
+                buildResumenMatrix();
+                recalcularTodo();
+                
+                document.getElementById('stats').style.display = 'block';
+                document.getElementById('totalFaltas').textContent = faltasData.length;
+                document.getElementById('totalAlumnos').textContent = alumnos.size;
+                document.getElementById('totalModulos').textContent = modulos.size;
+                
+                displayFaltasDetalladas();
+                displayResumenTable();
+                displayApercibimientos();
+                displayComunicaciones();
+                
+                document.getElementById('downloadBtn').disabled = false;
+                document.getElementById('downloadResumenBtn').disabled = false;
+                document.getElementById('printBtn').disabled = false;
+                
+                // Ocultar controles
+                document.getElementById('controlsSection').classList.add('hidden');
+                
+            } catch (error) {
+                showError('Error al procesar: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        function recalcularTodo() {
+            calcularApercibimientosPendientes();
+            calcularComunicacionesPendientes();
+            
+            // Actualizar botones
+            actualizarBotones();
+        }
+
+        function actualizarBotones() {
+            const apercContainer = document.getElementById('apercibimientosButtonContainer');
+            if (apercibimientosPendientes.length > 0) {
+                apercContainer.innerHTML = '<button class="action-button danger" onclick="guardarApercibimientosConFecha()">💾 Guardar apercibimientos pendientes</button>';
+            } else {
+                apercContainer.innerHTML = '';
+            }
+            
+            const comunicContainer = document.getElementById('comunicacionesButtonContainer');
+            const comunicacionesNuevas = comunicacionesPendientes.filter(c => !c.yaEnviada);
+            if (comunicacionesNuevas.length > 0) {
+                comunicContainer.innerHTML = '<button class="action-button warning" onclick="guardarComunicacionesConFecha()">💾 Guardar comunicaciones pendientes</button>';
+            } else {
+                comunicContainer.innerHTML = '';
+            }
+        }
+
+        function processFaltaLineWithContext(student, line, currentIndex) {
+            const fechaMatch = line.match(/(\d{2}\/\d{2}\/\d{4})/);
+            if (!fechaMatch) return currentIndex;
+            
+            const fecha = fechaMatch[1];
+            const fechaObj = parseDate(fecha);
+            
+            const openParenIndex = line.indexOf('(');
+            if (openParenIndex === -1) return currentIndex;
+            
+            let parenContent = '';
+            let parenLevel = 1;
+            let i = openParenIndex + 1;
+            let lineIndex = currentIndex;
+            let currentLine = line;
+            
+            while (parenLevel > 0 && lineIndex < lines.length) {
+                while (i < currentLine.length) {
+                    const char = currentLine[i];
+                    if (char === '(') parenLevel++;
+                    if (char === ')') {
+                        parenLevel--;
+                        if (parenLevel === 0) break;
+                    }
+                    parenContent += char;
+                    i++;
+                }
+                
+                if (parenLevel > 0) {
+                    lineIndex++;
+                    if (lineIndex < lines.length) {
+                        currentLine = lines[lineIndex].trimRight();
+                        i = 0;
+                        if (parenContent.length > 0 && !parenContent.endsWith(' ')) {
+                            parenContent += ' ';
+                        }
+                    } else {
+                        break;
+                    }
+                }
+            }
+            
+            if (parenContent) {
+                const parts = parenContent.split(',');
+                if (parts.length >= 2) {
+                    let hora = parts[0].trim();
+                    let modulo = parts.slice(1).join(',').trim();
+                    modulo = modulo.replace(/\s+/g, ' ').trim();
+                    
+                    const moduloReal = findModuloInMapping(modulo);
+                    if (moduloReal) {
+                        modulo = moduloReal;
+                    }
+                    
+                    if (modulo) {
+                        modulos.add(modulo);
+                    }
+                    
+                    faltasData.push({
+                        alumno: student,
+                        fecha: fecha,
+                        fechaObj: fechaObj,
+                        hora: hora,
+                        modulo: modulo
+                    });
+                }
+            }
+            
+            return lineIndex;
+        }
+
+        function buildResumenMatrix() {
+            matrizResumen = {};
+            const modulosArray = Array.from(modulos).sort();
+            
+            alumnos.forEach(alumno => {
+                matrizResumen[alumno] = {};
+                modulosArray.forEach(m => matrizResumen[alumno][m] = 0);
+            });
+            
+            faltasData.forEach(falta => {
+                if (matrizResumen[falta.alumno] && falta.modulo) {
+                    matrizResumen[falta.alumno][falta.modulo]++;
+                }
+            });
+        }
+
+        function calcularApercibimientosPendientes() {
+            apercibimientosPendientes = [];
+            const alumnosArray = Array.from(alumnos).sort();
+            const modulosArray = Array.from(modulos).sort();
+            
+            modulosArray.forEach(modulo => {
+                const sesionesTotales = sesionesPorModulo[modulo] || 0;
+                if (sesionesTotales === 0) return;
+                
+                const umbral6 = Math.floor(sesionesTotales * 0.06) + 1;
+                
+                alumnosArray.forEach(alumno => {
+                    const faltas = matrizResumen[alumno]?.[modulo] || 0;
+                    if (faltas >= umbral6) {
+                        const porcentaje = ((faltas / sesionesTotales) * 100).toFixed(2);
+                        const key = `${normalizeString(alumno)}|${normalizeString(modulo)}`;
+                        
+                        if (!apercibimientosPrevios.has(key)) {
+                            apercibimientosPendientes.push({
+                                alumno,
+                                modulo,
+                                faltas,
+                                porcentaje,
+                                umbral6
+                            });
+                        }
+                    }
+                });
+            });
+        }
+
+        function calcularComunicacionesPendientes() {
+            comunicacionesPendientes = [];
+            
+            if (apercibimientosPrevios.size === 0) return;
+            
+            const alumnosArray = Array.from(alumnos).sort();
+            const modulosArray = Array.from(modulos).sort();
+            
+            modulosArray.forEach(modulo => {
+                const sesionesTotales = sesionesPorModulo[modulo] || 0;
+                if (sesionesTotales === 0) return;
+                
+                const umbral4 = Math.floor(sesionesTotales * 0.04) + 1;
+                
+                alumnosArray.forEach(alumno => {
+                    const key = `${normalizeString(alumno)}|${normalizeString(modulo)}`;
+                    const apercibimiento = apercibimientosPorAlumnoModulo[key];
+                    
+                    if (apercibimiento && apercibimiento.fechaAcuse) {
+                        // Contar faltas desde la fecha de acuse
+                        const faltasDesdeAcuse = faltasData.filter(f => 
+                            normalizeString(f.alumno) === normalizeString(alumno) &&
+                            normalizeString(f.modulo) === normalizeString(modulo) &&
+                            f.fechaObj && apercibimiento.fechaAcuse && f.fechaObj > apercibimiento.fechaAcuse
+                        ).length;
+                        
+                        if (faltasDesdeAcuse >= umbral4) {
+                            const porcentaje = ((faltasDesdeAcuse / sesionesTotales) * 100).toFixed(2);
+                            const yaEnviada = comunicacionesPrevias.has(key);
+                            
+                            comunicacionesPendientes.push({
+                                alumno,
+                                modulo,
+                                fechaUltimoAperc: apercibimiento.dataAcuse,
+                                faltasDesdeAcuse,
+                                porcentaje,
+                                umbral4,
+                                yaEnviada
+                            });
+                        }
+                    }
+                });
+            });
+        }
+
+        function determinarClaseCelda(alumno, modulo, count) {
+            const sesionesTotales = sesionesPorModulo[modulo] || 0;
+            if (sesionesTotales === 0) return '';
+            
+            const umbral6 = Math.floor(sesionesTotales * 0.06) + 1;
+            const key = `${normalizeString(alumno)}|${normalizeString(modulo)}`;
+            
+            // Verificar si hay apercibimiento previo
+            const tieneApercibimiento = apercibimientosPrevios.has(key);
+            
+            // Verificar si hay comunicación pendiente o enviada
+            const comunicacion = comunicacionesPendientes.find(c => 
+                normalizeString(c.alumno) === normalizeString(alumno) && 
+                normalizeString(c.modulo) === normalizeString(modulo)
+            );
+            
+            if (comunicacion) {
+                return comunicacion.yaEnviada ? 'celda-comunicacion-enviada' : 'celda-comunicacion-pendiente';
+            }
+            
+            if (count >= umbral6) {
+                return tieneApercibimiento ? 'celda-apercibimiento-enviado' : 'celda-apercibimiento-pendiente';
+            }
+            
+            return '';
+        }
+
+        function displayFaltasDetalladas() {
+            let body = '';
+            faltasData.forEach(f => {
+                let apellidos = alumnosDetalle[f.alumno]?.apellidos || f.alumno.split(',')[0]?.trim() || '';
+                let nombre = alumnosDetalle[f.alumno]?.nombre || f.alumno.split(',')[1]?.trim() || '';
+                
+                body += `<tr>
+                    <td>${apellidos}</td>
+                    <td>${nombre}</td>
+                    <td>${f.fecha}</td>
+                    <td>${f.hora}</td>
+                    <td>${f.modulo}</td>
+                </tr>`;
+            });
+            
+            document.getElementById('faltasDetalladasBody').innerHTML = body;
+            
+            // Inicializar DataTable
+            if ($.fn.DataTable) {
+                if ($.fn.DataTable.isDataTable('#faltasDetalladasTable')) {
+                    $('#faltasDetalladasTable').DataTable().destroy();
+                }
+                $('#faltasDetalladasTable').DataTable({
+                    language: datatableSpanish,
+                    pageLength: 100,
+                    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+                    order: [[2, 'desc']] // Ordenar por fecha descendente
+                });
+            }
+        }
+
+        function displayResumenTable() {
+            const modulosArray = Array.from(modulos).sort();
+            const alumnosArray = Array.from(alumnos).sort();
+            
+            let header = '<th>Alumno</th>';
+            modulosArray.forEach(m => {
+                const umbral = umbralesPorModulo[m]?.umbral6 || '?';
+                const displayName = m.length > 25 ? m.substring(0, 22) + '...' : m;
+                header += `<th title="${m} (Umbral 6%: ${umbral})">${displayName}<br><span class="umbral-info">Umbral: ${umbral}</span></th>`;
+            });
+            document.getElementById('tableHeader').innerHTML = header;
+            
+            let body = '';
+            alumnosArray.forEach(alumno => {
+                let row = `<tr><td><strong>${alumno}</strong></td>`;
+                modulosArray.forEach(modulo => {
+                    const count = matrizResumen[alumno]?.[modulo] || 0;
+                    const claseCelda = determinarClaseCelda(alumno, modulo, count);
+                    
+                    row += `<td class="${claseCelda}" style="text-align: center;">${count}</td>`;
+                });
+                row += '</tr>';
+                body += row;
+            });
+            
+            document.getElementById('tableBody').innerHTML = body;
+            
+            // Inicializar DataTable
+            if ($.fn.DataTable) {
+                if ($.fn.DataTable.isDataTable('#resumenTable')) {
+                    $('#resumenTable').DataTable().destroy();
+                }
+                $('#resumenTable').DataTable({
+                    language: datatableSpanish,
+                    pageLength: 100,
+                    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+                    order: [[0, 'asc']]
+                });
+            }
+        }
+
+        function displayApercibimientos() {
+            const alumnosArray = Array.from(alumnos).sort();
+            const modulosArray = Array.from(modulos).sort();
+            
+            let apercibimientos = [];
+            
+            modulosArray.forEach(modulo => {
+                const sesionesTotales = sesionesPorModulo[modulo] || 0;
+                if (sesionesTotales === 0) return;
+                
+                const umbral6 = Math.floor(sesionesTotales * 0.06) + 1;
+                
+                alumnosArray.forEach(alumno => {
+                    const faltas = matrizResumen[alumno]?.[modulo] || 0;
+                    if (faltas >= umbral6) {
+                        const porcentaje = ((faltas / sesionesTotales) * 100).toFixed(2);
+                        const key = `${normalizeString(alumno)}|${normalizeString(modulo)}`;
+                        const esPrevio = apercibimientosPrevios.has(key);
+                        
+                        apercibimientos.push({
+                            alumno,
+                            modulo,
+                            faltas,
+                            porcentaje,
+                            umbral6,
+                            esPrevio
+                        });
+                    }
+                });
+            });
+            
+            apercibimientos.sort((a, b) => {
+                if (a.modulo < b.modulo) return -1;
+                if (a.modulo > b.modulo) return 1;
+                return b.porcentaje - a.porcentaje;
+            });
+            
+            let body = '';
+            apercibimientos.forEach(a => {
+                const clase = a.esPrevio ? 'celda-apercibimiento-enviado' : 'celda-apercibimiento-pendiente';
+                const estado = a.esPrevio ? '✅ Ya enviado' : '🔶 Pendiente';
+                body += `<tr class="${clase}">
+                    <td><strong>${a.alumno}</strong></td>
+                    <td>${a.modulo}</td>
+                    <td style="text-align: center;">${a.faltas}</td>
+                    <td style="text-align: center;">${a.porcentaje}%</td>
+                    <td style="text-align: center;">${a.umbral6}</td>
+                    <td style="text-align: center;">${estado}</td>
+                </tr>`;
+            });
+            
+            if (apercibimientos.length === 0) {
+                body = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No hay alumnos con apercibimientos (≥6%).</td></tr>';
+            }
+            
+            document.getElementById('apercibimientosBody').innerHTML = body;
+            
+            // Inicializar DataTable
+            if ($.fn.DataTable) {
+                if ($.fn.DataTable.isDataTable('#apercibimientosTable')) {
+                    $('#apercibimientosTable').DataTable().destroy();
+                }
+                $('#apercibimientosTable').DataTable({
+                    language: datatableSpanish,
+                    pageLength: 100,
+                    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+                    order: [[1, 'asc'], [2, 'desc']]
+                });
+            }
+        }
+
+        function displayComunicaciones() {
+            if (comunicacionesPendientes.length === 0) {
+                document.getElementById('comunicacionesBody').innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No hay comunicaciones pendientes.</td></tr>';
+                
+                if ($.fn.DataTable && $.fn.DataTable.isDataTable('#comunicacionesTable')) {
+                    $('#comunicacionesTable').DataTable().destroy();
+                }
+                return;
+            }
+            
+            let body = '';
+            comunicacionesPendientes.forEach(c => {
+                const clase = c.yaEnviada ? 'celda-comunicacion-enviada' : 'celda-comunicacion-pendiente';
+                const estado = c.yaEnviada ? '⚫ Ya enviada' : '🔴 Pendiente';
+                body += `<tr class="${clase}">
+                    <td><strong>${c.alumno}</strong></td>
+                    <td>${c.modulo}</td>
+                    <td style="text-align: center;">${c.fechaUltimoAperc}</td>
+                    <td style="text-align: center;">${c.faltasDesdeAcuse}</td>
+                    <td style="text-align: center;">${c.porcentaje}%</td>
+                    <td style="text-align: center;">${c.umbral4}</td>
+                    <td style="text-align: center;">${estado}</td>
+                </tr>`;
+            });
+            
+            document.getElementById('comunicacionesBody').innerHTML = body;
+            
+            // Inicializar DataTable
+            if ($.fn.DataTable) {
+                if ($.fn.DataTable.isDataTable('#comunicacionesTable')) {
+                    $('#comunicacionesTable').DataTable().destroy();
+                }
+                $('#comunicacionesTable').DataTable({
+                    language: datatableSpanish,
+                    pageLength: 100,
+                    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+                    order: [[1, 'asc'], [3, 'desc']]
+                });
+            }
+        }
+
+        function guardarApercibimientosConFecha() {
+            if (apercibimientosPendientes.length === 0) {
+                showWarning('No hay apercibimientos pendientes para guardar.');
+                return;
+            }
+            
+            const fechaActual = getCurrentDateFormatted();
+            const fechaFilename = getCurrentDateForFilename();
+            let nuevosRegistros = [];
+            
+            apercibimientosPendientes.forEach(a => {
+                // Dividir nombre en apellidos y nombre
+                const nameParts = a.alumno.split(',');
+                let apellido1 = '';
+                let apellido2 = '';
+                let nome = '';
+                
+                if (nameParts.length === 2) {
+                    const apellidos = nameParts[0].trim().split(' ');
+                    if (apellidos.length >= 2) {
+                        apellido1 = apellidos[0];
+                        apellido2 = apellidos.slice(1).join(' ');
+                    } else {
+                        apellido1 = apellidos[0] || '';
+                        apellido2 = '';
+                    }
+                    nome = nameParts[1].trim();
+                } else {
+                    apellido1 = a.alumno;
+                    apellido2 = '';
+                    nome = '';
+                }
+                
+                nuevosRegistros.push({
+                    tipo: 'ApercibimentoPD',
+                    dataInforme: fechaActual,
+                    dataAcuse: fechaActual,
+                    apellido1,
+                    apellido2,
+                    nome,
+                    materia: a.modulo
+                });
+            });
+            
+            // Generar CSV completo (original + nuevos)
+            let csvCompleto = contenidoOriginalApercibimientos;
+            
+            // Añadir cabecera si no existe
+            if (!csvCompleto.includes('TIPO INFORME')) {
+                csvCompleto = 'TIPO INFORME,DATA INFORME,DATA ACUSE,1º APELIDO,2º APELIDO,NOME,MATERIA\n';
+            }
+            
+            // Asegurar que termina con salto de línea
+            if (!csvCompleto.endsWith('\n')) {
+                csvCompleto += '\n';
+            }
+            
+            // Añadir nuevos registros
+            nuevosRegistros.forEach(r => {
+                csvCompleto += `${r.tipo},${r.dataInforme},${r.dataAcuse},${r.apellido1},${r.apellido2},${r.nome},${r.materia}\n`;
+            });
+            
+            downloadCSVFile(csvCompleto, `${fechaFilename}_DATOS_Apercibimentos_completo.csv`);
+            
+            // Actualizar datos en memoria
+            nuevosRegistros.forEach(r => {
+                const key = `${normalizeString(r.apellido1 + ' ' + r.apellido2 + ', ' + r.nome)}|${normalizeString(r.materia)}`;
+                apercibimientosPrevios.add(key);
+                apercibimientosPorAlumnoModulo[key] = {
+                    fechaAcuse: parseDate(r.dataAcuse),
+                    dataAcuse: r.dataAcuse,
+                    dataInforme: r.dataInforme,
+                    tipo: r.tipo
+                };
+            });
+            
+            contenidoOriginalApercibimientos = csvCompleto;
+            
+            // Recalcular todo
+            recalcularTodo();
+            displayResumenTable();
+            displayApercibimientos();
+            displayComunicaciones();
+            
+            showSuccess(`Se han añadido ${nuevosRegistros.length} apercibimientos. Archivo guardado como ${fechaFilename}_DATOS_Apercibimentos_completo.csv`);
+        }
+
+        function guardarComunicacionesConFecha() {
+            const comunicacionesNuevas = comunicacionesPendientes.filter(c => !c.yaEnviada);
+            
+            if (comunicacionesNuevas.length === 0) {
+                showWarning('No hay comunicaciones nuevas para guardar.');
+                return;
+            }
+            
+            const fechaActual = getCurrentDateFormatted();
+            const fechaFilename = getCurrentDateForFilename();
+            let nuevosRegistros = [];
+            
+            comunicacionesNuevas.forEach(c => {
+                // Dividir nombre en apellidos y nombre
+                const nameParts = c.alumno.split(',');
+                let apellido1 = '';
+                let apellido2 = '';
+                let nome = '';
+                
+                if (nameParts.length === 2) {
+                    const apellidos = nameParts[0].trim().split(' ');
+                    if (apellidos.length >= 2) {
+                        apellido1 = apellidos[0];
+                        apellido2 = apellidos.slice(1).join(' ');
+                    } else {
+                        apellido1 = apellidos[0] || '';
+                        apellido2 = '';
+                    }
+                    nome = nameParts[1].trim();
+                } else {
+                    apellido1 = c.alumno;
+                    apellido2 = '';
+                    nome = '';
+                }
+                
+                nuevosRegistros.push({
+                    tipo: 'ComunicaciónPD',
+                    dataInforme: fechaActual,
+                    dataAcuse: fechaActual,
+                    apellido1,
+                    apellido2,
+                    nome,
+                    materia: c.modulo
+                });
+            });
+            
+            // Generar CSV completo (original + nuevos)
+            let csvCompleto = contenidoOriginalApercibimientos;
+            
+            // Añadir cabecera si no existe
+            if (!csvCompleto.includes('TIPO INFORME')) {
+                csvCompleto = 'TIPO INFORME,DATA INFORME,DATA ACUSE,1º APELIDO,2º APELIDO,NOME,MATERIA\n';
+            }
+            
+            // Asegurar que termina con salto de línea
+            if (!csvCompleto.endsWith('\n')) {
+                csvCompleto += '\n';
+            }
+            
+            // Añadir nuevos registros
+            nuevosRegistros.forEach(r => {
+                csvCompleto += `${r.tipo},${r.dataInforme},${r.dataAcuse},${r.apellido1},${r.apellido2},${r.nome},${r.materia}\n`;
+            });
+            
+            downloadCSVFile(csvCompleto, `${fechaFilename}_DATOS_Apercibimentos_completo.csv`);
+            
+            // Actualizar datos en memoria
+            nuevosRegistros.forEach(r => {
+                const key = `${normalizeString(r.apellido1 + ' ' + r.apellido2 + ', ' + r.nome)}|${normalizeString(r.materia)}`;
+                comunicacionesPrevias.add(key);
+            });
+            
+            contenidoOriginalApercibimientos = csvCompleto;
+            
+            // Recalcular todo
+            recalcularTodo();
+            displayResumenTable();
+            displayApercibimientos();
+            displayComunicaciones();
+            
+            showSuccess(`Se han añadido ${nuevosRegistros.length} comunicaciones. Archivo guardado como ${fechaFilename}_DATOS_Apercibimentos_completo.csv`);
+        }
+
+        function downloadCSV() {
+            if (faltasData.length === 0) return;
+            
+            let csv = 'Apellidos,Nombre,Fecha,Hora,Módulo\n';
+            faltasData.forEach(f => {
+                let apellidos = alumnosDetalle[f.alumno]?.apellidos || f.alumno.split(',')[0]?.trim() || '';
+                let nombre = alumnosDetalle[f.alumno]?.nombre || f.alumno.split(',')[1]?.trim() || '';
+                
+                csv += `"${apellidos}","${nombre}",${f.fecha},${f.hora},"${f.modulo}"\n`;
+            });
+            
+            downloadCSVFile(csv, 'faltas_detalladas.csv');
+        }
+
+        function downloadResumenCSV() {
+            if (Object.keys(matrizResumen).length === 0) return;
+            
+            const modulosArray = Array.from(modulos).sort();
+            const alumnosArray = Array.from(alumnos).sort();
+            
+            let csv = 'Alumno,' + modulosArray.join(',') + '\n';
+            
+            alumnosArray.forEach(alumno => {
+                let row = `"${alumno}"`;
+                modulosArray.forEach(modulo => {
+                    const count = matrizResumen[alumno]?.[modulo] || 0;
+                    row += `,${count}`;
+                });
+                csv += row + '\n';
+            });
+            
+            downloadCSVFile(csv, 'tabla_resumen.csv');
+        }
+
+        function downloadCSVFile(content, filename) {
+            const blob = new Blob(["\uFEFF" + content], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function generarInformeImpresion() {
+            // Crear una nueva ventana para impresión
+            const ventanaImpresion = window.open('', '_blank');
+            
+            // Obtener los datos actuales
+            const fechaInforme = getCurrentDateFormatted();
+            
+            // Generar contenido HTML con saltos de página
+            let contenidoHTML = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Informe de Faltas - ${fechaInforme}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    h1 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+                    h2 { color: #555; margin-top: 30px; }
+                    table { border-collapse: collapse; width: 100%; margin-bottom: 20px; font-size: 12px; }
+                    th { background-color: #007bff; color: white; padding: 8px; text-align: left; }
+                    td { border: 1px solid #ddd; padding: 6px; }
+                    tr:nth-child(even) { background-color: #f9f9f9; }
+                    .fecha { color: #666; margin-bottom: 20px; }
+                    .umbral-info { font-size: 0.85em; color: #666; }
+                    .nota { font-style: italic; color: #666; margin-top: 30px; }
+                    .page-break { page-break-before: always; }
+                    @media print {
+                        .page-break { page-break-before: always; }
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>📊 Informe de Faltas de Asistencia</h1>
+                <div class="fecha">Fecha del informe: ${fechaInforme}</div>
+            `;
+            
+            // 1. Módulos y Umbrales (sin salto de página antes)
+            if (Object.keys(modulosData).length > 0) {
+                contenidoHTML += '<h2>1. Módulos y Umbrales</h2>';
+                contenidoHTML += '<table><thead><tr><th>Módulo</th><th>Horas</th><th>Sesiones (50\')</th><th>Umbral 6%</th><th>Umbral 4%</th></tr></thead><tbody>';
+                
+                Object.keys(modulosData).sort().forEach(nome => {
+                    const m = modulosData[nome];
+                    contenidoHTML += `<tr>
+                        <td>${m.nome}</td>
+                        <td style="text-align: center;">${m.horas}</td>
+                        <td style="text-align: center;">${m.sesionesTotales}</td>
+                        <td style="text-align: center;">${m.umbral6}</td>
+                        <td style="text-align: center;">${m.umbral4}</td>
+                    </tr>`;
+                });
+                
+                contenidoHTML += '</tbody></table>';
+            }
+            
+            // 3. Tabla Resumen (con salto de página)
+            if (Object.keys(matrizResumen).length > 0) {
+                contenidoHTML += '<div class="page-break"></div>';
+                contenidoHTML += '<h2>2. Tabla Resumen de Faltas</h2>';
+                contenidoHTML += '<p><strong>Leyenda:</strong> Sin color (<6%), Naranja (pendiente), Amarillo (enviado), Rojo (comunicación pendiente), Negro (comunicación enviada)</p>';
+                
+                const modulosArray = Array.from(modulos).sort();
+                const alumnosArray = Array.from(alumnos).sort();
+                
+                contenidoHTML += '<table><thead><tr><th>Alumno</th>';
+                modulosArray.forEach(m => {
+                    contenidoHTML += `<th>${m.length > 20 ? m.substring(0, 17) + '...' : m}</th>`;
+                });
+                contenidoHTML += '</tr></thead><tbody>';
+                
+                alumnosArray.forEach(alumno => {
+                    contenidoHTML += `<tr><td><strong>${alumno}</strong></td>`;
+                    modulosArray.forEach(modulo => {
+                        const count = matrizResumen[alumno]?.[modulo] || 0;
+                        contenidoHTML += `<td style="text-align: center;">${count}</td>`;
+                    });
+                    contenidoHTML += '</tr>';
+                });
+                
+                contenidoHTML += '</tbody></table>';
+            }
+            
+            // 4. Apercibimientos (con salto de página)
+            if (apercibimientosPendientes.length > 0 || document.getElementById('apercibimientosBody').children.length > 0) {
+                contenidoHTML += '<div class="page-break"></div>';
+                contenidoHTML += '<h2>3. Apercibimientos (≥6%)</h2>';
+                contenidoHTML += '<table><thead><tr><th>Alumno</th><th>Módulo</th><th>Faltas</th><th>%</th><th>Umbral</th><th>Estado</th></tr></thead><tbody>';
+                
+                const filasAperc = document.getElementById('apercibimientosBody').children;
+                for (let i = 0; i < filasAperc.length; i++) {
+                    const celdas = filasAperc[i].cells;
+                    if (celdas.length >= 6) {
+                        contenidoHTML += `<tr>
+                            <td>${celdas[0].textContent}</td>
+                            <td>${celdas[1].textContent}</td>
+                            <td style="text-align: center;">${celdas[2].textContent}</td>
+                            <td style="text-align: center;">${celdas[3].textContent}</td>
+                            <td style="text-align: center;">${celdas[4].textContent}</td>
+                            <td style="text-align: center;">${celdas[5].textContent}</td>
+                        </tr>`;
+                    }
+                }
+                
+                contenidoHTML += '</tbody></table>';
+            }
+            
+            // 5. Comunicaciones (con salto de página)
+            if (comunicacionesPendientes.length > 0) {
+                contenidoHTML += '<div class="page-break"></div>';
+                contenidoHTML += '<h2>4. Comunicaciones PD</h2>';
+                contenidoHTML += '<table><thead><tr><th>Alumno</th><th>Módulo</th><th>Fecha último aperc.</th><th>Faltas desde</th><th>%</th><th>Umbral</th><th>Estado</th></tr></thead><tbody>';
+                
+                comunicacionesPendientes.forEach(c => {
+                    contenidoHTML += `<tr>
+                        <td>${c.alumno}</td>
+                        <td>${c.modulo}</td>
+                        <td style="text-align: center;">${c.fechaUltimoAperc}</td>
+                        <td style="text-align: center;">${c.faltasDesdeAcuse}</td>
+                        <td style="text-align: center;">${c.porcentaje}%</td>
+                        <td style="text-align: center;">${c.umbral4}</td>
+                        <td style="text-align: center;">${c.yaEnviada ? 'Ya enviada' : 'Pendiente'}</td>
+                    </tr>`;
+                });
+                
+                contenidoHTML += '</tbody></table>';
+            }
+            
+            contenidoHTML += `
+                <div class="nota">Informe generado automáticamente por el Analizador de Faltas.</div>
+            </body>
+            </html>
+            `;
+            
+            ventanaImpresion.document.write(contenidoHTML);
+            ventanaImpresion.document.close();
+            ventanaImpresion.print();
+        }
+
+        function showError(message) {
+            document.getElementById('error').textContent = message;
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('success').style.display = 'none';
+            document.getElementById('warning').style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            document.getElementById('success').textContent = message;
+            document.getElementById('success').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('warning').style.display = 'none';
+        }
+
+        function showWarning(message) {
+            document.getElementById('warning').textContent = message;
+            document.getElementById('warning').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('success').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
