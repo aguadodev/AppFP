@@ -1100,76 +1100,125 @@
             }
         }
 
-        function processFaltaLineWithContext(student, line, currentIndex) {
-            const fechaMatch = line.match(/(\d{2}\/\d{2}\/\d{4})/);
-            if (!fechaMatch) return currentIndex;
-            
-            const fecha = fechaMatch[1];
-            const fechaObj = parseDate(fecha);
-            
-            const openParenIndex = line.indexOf('(');
-            if (openParenIndex === -1) return currentIndex;
-            
-            let parenContent = '';
-            let parenLevel = 1;
-            let i = openParenIndex + 1;
-            let lineIndex = currentIndex;
-            let currentLine = line;
-            
-            while (parenLevel > 0 && lineIndex < lines.length) {
-                while (i < currentLine.length) {
-                    const char = currentLine[i];
-                    if (char === '(') parenLevel++;
-                    if (char === ')') {
-                        parenLevel--;
-                        if (parenLevel === 0) break;
-                    }
-                    parenContent += char;
-                    i++;
-                }
-                
-                if (parenLevel > 0) {
-                    lineIndex++;
-                    if (lineIndex < lines.length) {
-                        currentLine = lines[lineIndex].trimRight();
-                        i = 0;
-                        if (parenContent.length > 0 && !parenContent.endsWith(' ')) {
-                            parenContent += ' ';
-                        }
-                    } else {
-                        break;
-                    }
+function processFaltaLineWithContext(student, line, currentIndex) {
+    // Extraer fecha
+    const fechaMatch = line.match(/(\d{2}\/\d{2}\/\d{4})/);
+    if (!fechaMatch) return currentIndex;
+    
+    const fecha = fechaMatch[1];
+    const fechaObj = parseDate(fecha);
+    
+    // Extraer tipo de falta (Asistencia o Puntualidade)
+    const tipoMatch = line.match(/(Asistencia|Puntualidade)/);
+    if (!tipoMatch) return currentIndex;
+    
+    const tipoFalta = tipoMatch[1];
+    
+    // Buscar el paréntesis de apertura
+    const openParenIndex = line.indexOf('(');
+    if (openParenIndex === -1) return currentIndex;
+    
+    let parenContent = '';
+    let parenLevel = 1;
+    let i = openParenIndex + 1;
+    let lineIndex = currentIndex;
+    let currentLine = line;
+    
+    // Recolectar contenido del paréntesis (puede ocupar múltiples líneas)
+    while (parenLevel > 0 && lineIndex < lines.length) {
+        while (i < currentLine.length) {
+            const char = currentLine[i];
+            if (char === '(') parenLevel++;
+            if (char === ')') {
+                parenLevel--;
+                if (parenLevel === 0) {
+                    i++; // Avanzar después del cierre
+                    break;
                 }
             }
-            
-            if (parenContent) {
-                const parts = parenContent.split(',');
-                if (parts.length >= 2) {
-                    let hora = parts[0].trim();
-                    let modulo = parts.slice(1).join(',').trim();
-                    modulo = modulo.replace(/\s+/g, ' ').trim();
-                    
-                    const moduloReal = findModuloInMapping(modulo);
-                    if (moduloReal) {
-                        modulo = moduloReal;
-                    }
-                    
-                    if (modulo) {
-                        modulos.add(modulo);
-                    }
-                    
-                    faltasData.push({
-                        alumno: student,
-                        fecha: fecha,
-                        fechaObj: fechaObj,
-                        hora: hora,
-                        modulo: modulo
-                    });
-                }
+            if (parenLevel > 0 || char !== ')') {
+                parenContent += char;
             }
-            
-            return lineIndex;
+            i++;
         }
+        
+        if (parenLevel > 0) {
+            lineIndex++;
+            if (lineIndex < lines.length) {
+                currentLine = lines[lineIndex].trimRight();
+                i = 0;
+                if (parenContent.length > 0 && !parenContent.endsWith(' ')) {
+                    parenContent += ' ';
+                }
+            } else {
+                break;
+            }
+        }
+    }
+    
+    // Determinar si la falta está justificada
+    let justificada = false;
+    let restoLinea = '';
+    
+    // Obtener el resto de la línea actual después del paréntesis
+    if (i < currentLine.length) {
+        restoLinea = currentLine.substring(i).trim();
+    }
+    
+    // Buscar Si/Non en el resto de la línea
+    if (restoLinea.includes('Si')) {
+        justificada = true;
+    } else if (restoLinea.includes('Non')) {
+        justificada = false;
+    } else {
+        // Buscar en la siguiente línea
+        const nextLineIndex = lineIndex + 1;
+        if (nextLineIndex < lines.length) {
+            const nextLine = lines[nextLineIndex].trim();
+            if (nextLine.includes('Si')) {
+                justificada = true;
+                lineIndex = nextLineIndex; // Consumir la línea
+            } else if (nextLine.includes('Non')) {
+                justificada = false;
+                lineIndex = nextLineIndex; // Consumir la línea
+            }
+        }
+    }
+    
+    // Procesar el contenido del paréntesis para obtener hora y módulo
+    if (parenContent) {
+        const parts = parenContent.split(',');
+        if (parts.length >= 2) {
+            let hora = parts[0].trim();
+            let modulo = parts.slice(1).join(',').trim();
+            modulo = modulo.replace(/\s+/g, ' ').trim();
+            
+            // Buscar el módulo en el mapping
+            const moduloReal = findModuloInMapping(modulo);
+            if (moduloReal) {
+                modulo = moduloReal;
+            }
+            
+            // Añadir el módulo al conjunto
+            if (modulo) {
+                modulos.add(modulo);
+            }
+            
+            // Solo guardar si es ASISTENCIA y NO JUSTIFICADA
+            if (tipoFalta === 'Asistencia' && !justificada) {
+                faltasData.push({
+                    alumno: student,
+                    fecha: fecha,
+                    fechaObj: fechaObj,
+                    hora: hora,
+                    modulo: modulo
+                });
+            }
+        }
+    }
+    
+    return lineIndex;
+}
 
         function buildResumenMatrix() {
             matrizResumen = {};

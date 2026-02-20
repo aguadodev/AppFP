@@ -2,32 +2,54 @@
 
 <h1>AppFP</h1>
 <h2>Analizador de Faltas, Apercibimientos y PD</h2>
-<pre>
-<a href="FaltasDetalladasYApercibimientos1.2.html">FaltasDetalladasYApercibimientos1.2.html</a>
+<p><a href="FaltasDetalladasYApercibimientos1.2.html">FaltasDetalladasYApercibimientos1.2.html</a></p>
+<h3>Entrada de Datos</h3>
+<ul>
+    <li><strong>DATOS - Módulos.csv</strong><br>
+        Datos de los módulos, número de horas anuales, etc. en formato CSV como el modelo que se adjunta.
+        Extraído de <a
+            href="https://www.edu.xunta.gal/fp/familias-profesionais">https://www.edu.xunta.gal/fp/familias-profesionais</a>
+    </li>
+    <li><strong>DATOS - Apercibimentos.csv</strong> (Opcional)<br>
+        Datos de Apercibimientos y Comunicaciones de PD en formato CSV como el modelo que se adjunta.<br>
+        Si no se aporta se puede omitir y utilizar la propia aplicación para generar y descargar un primer borrador en
+        el que luego sólo habrá que ajustar las fechas de informe y acuse.
+    </li>
+    <li><strong>FALTAS DETALLADAS</strong><br>
+        Contenido del Informe predefinido en PDF <strong>"AL030-Faltas detalladas"</strong> con
+        todas las faltas desde el inicio del curso (9/9/2026).
+        Se puede hacer un copy-paste "a lo bruto" del contenido del PDF en el cuadro de texto o cargar un fichero de
+        texto donde se haya guardado este contenido previamente.
+        La aplicación parseará y filtrará el contenido para procesar sólo las faltas de asistencia no justificadas.
+    </li>
+</ul>
 
-<strong>DATOS - Módulos.csv</strong>
-Datos de los módulos, número de horas anuales, etc.
-Extraído de <a href="https://www.edu.xunta.gal/fp/familias-profesionais">https://www.edu.xunta.gal/fp/familias-profesionais</a>
+<h3>Salida de Datos</h3>
+<ol>
+    <li><strong>Módulos y Umbrales</strong><br>
+    </li>
+    <li><strong>Faltas Detalladas</strong><br>
+    </li>
+    <li><strong>Tabla Resumen</strong><br>
+    </li>
+    <li><strong>Apercibimientos (6%)</strong><br>
+    </li>
+    <li><strong>Comunicaciones PD (4%)</strong><br>
+    </li>
+    <li><strong>Informe para imprimir</strong><br>
+    </li>
+</ol>
 
-<strong>DATOS - Apercibimentos.csv</strong>
-Modelo de fichero de apercibimientos y Comunicaciones de PD
-
-<strong>FALTAS DETALLADAS</strong>
-Resultado de Copy-Paste del Informe predefinido en PDF <strong>"AL030-Faltas detalladas"</strong> que contenga
-todas las faltas de asistencia no justificadas desde el inicio del curso.
-
-Resultados:
-- Generar y tramitar el "AL933-Apercibimento PD" para el alumnado con nuevos apercibimientos.
-- Tramitar la Comunicación PD para el alumnado con nuevas comunicaciones PD.
-- Actualizar y descargar el fichero CSV de Apercibimientos y Comunicaciones
-
-</pre>
-
-
+<h3>Acciones posteriores</h3>
+<ol>
+    <li><strong>Generar y tramitar el "AL933-Apercibimento PD" para el alumnado con nuevos apercibimientos.</strong><br>
+    </li>
+    <li><strong>Tramitar la Comunicación PD para el alumnado con nuevas comunicaciones PD.</strong><br>
+    </li>
+    <li><strong>Actualizar y descargar el fichero CSV de Apercibimientos y Comunicaciones</strong><br>
+    </li>
+</ol>
 
 <h2>Analizador de Cualificacións</h2>
-<pre>
-<a hred="AnalizadorCualificacions-InformeAL080.html">AnalizadorCualificacions-InformeAL080.html</a>
-Carga el fichero CSV resultante del Informe predefinido "AL080-Listaxe cualificacións"
-
-</pre>
+<p><a href="AnalizadorCualificacions-InformeAL080.html">AnalizadorCualificacions-InformeAL080.html</a></p>
+<p>Carga el fichero CSV resultante del Informe predefinido "AL080-Listaxe cualificacións"</p>
