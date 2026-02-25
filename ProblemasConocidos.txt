@@ -1,0 +1,3 @@
+Inconsistencias del Xade:
+- Apellidos compuestos como "Ramírez de Aguilera Cruz" o "da Silva Ribeiro" en el informe deFaltas detalladas se generan con la partícula "De" o "Da" en mayúscula.
+- La aplicación AppFP puede no separar correctamente los dos apellidos a partir de la cadena conjunta del informe.
