@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="gl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizador de Cualificacións - Xerador de Acta ODT</title>
+    
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .file-input-area {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .file-input-area input[type="file"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+
+        .btn-success:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .tab-container {
+            border-bottom: 2px solid #d0d0d0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 20px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: #e9ecef;
+            font-size: 14px;
+            border-radius: 5px 5px 0 0;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .tab-content-wrapper {
+            border: 1px solid #dee2e6;
+            border-top: none;
+            padding: 20px;
+            border-radius: 0 0 5px 5px;
+            background: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .dataTables_wrapper {
+            margin-top: 10px;
+        }
+        
+        .dataTables_filter input {
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 5px 10px;
+            margin-left: 8px;
+        }
+        
+        .dataTables_length select {
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 5px;
+            margin: 0 5px;
+        }
+        
+        .summary-table {
+            width: 100% !important;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        .summary-table th,
+        .summary-table td {
+            border: 1px solid #a2a2a2;
+            padding: 8px;
+            text-align: center;
+        }
+        
+        .summary-table th {
+            background-color: #e0e0e0;
+            font-weight: bold;
+        }
+        
+        .left-align-cell {
+            text-align: left;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        .listaxe-alumnado {
+            max-height: 300px;
+            overflow-y: auto;
+            text-align: left;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Analizador de Cualificacións - Xerador de Acta ODT</h1>
+            <p>Analiza o CSV de cualificacións e xera a acta de avaliación co formato oficial</p>
+        </div>
+
+        <div class="main-content">
+            <div class="file-input-area">
+                <input type="file" id="csvFileInput" accept=".csv">
+                <button class="btn btn-primary" id="analizarBtn" disabled>🔍 Analizar Ficheiro</button>
+                <button class="btn btn-success" id="exportarActaBtn" disabled>📄 Xerar Acta ODT</button>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label>📅 Data da Acta</label>
+                    <input type="date" id="dataActa" value="">
+                </div>
+                <div class="form-group">
+                    <label>👨‍🏫 Titor/a</label>
+                    <input type="text" id="titorActa" value="Óscar Núñez Aguado">
+                </div>
+                <div class="form-group">
+                    <label>📚 Curso Escolar</label>
+                    <input type="text" id="cursoActa" value="2025-26">
+                </div>
+                <div class="form-group">
+                    <label>👥 Grupo</label>
+                    <input type="text" id="grupoActa" value="DAM1">
+                </div>
+                <div class="form-group full-width">
+                    <label>📝 Valoración Xeral do Grupo</label>
+                    <textarea id="valoracionXeral" placeholder="Engade aquí a valoración xeral do grupo..."></textarea>
+                </div>
+                <div class="form-group full-width">
+                    <label>📋 Acordos Tomados en Relación ao Grupo</label>
+                    <textarea id="acordosGrupo" placeholder="Engade aquí os acordos tomados..."></textarea>
+                </div>
+                <div class="form-group full-width">
+                    <label>💬 Outras Observacións</label>
+                    <textarea id="observacions" placeholder="Engade aquí outras observacións..."></textarea>
+                </div>
+            </div>
+
+            <div id="informesContainer" style="display: none;">
+                <div class="tab-container">
+                    <button class="tab-btn active" data-tab="informeModulos">Resumo Módulos</button>
+                    <button class="tab-btn" data-tab="informeAlumnado">Resumo Alumnado</button>
+                </div>
+                <div class="tab-content-wrapper">
+                    <div id="informeModulos" class="tab-content active"></div>
+                    <div id="informeAlumnado" class="tab-content"></div>
+                </div>
+            </div>
+            <div id="mensaxeInicial">
+                <p>📁 Selecciona un ficheiro CSV e fai clic en "Analizar Ficheiro" para comezar...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- DataTables JS -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    
+    <script>
+        let datosAnalise = {
+            estadisticasModulos: null,
+            datosPorAlumno: null,
+            infoCiclo: null,
+            contadorSuspensos: null,
+            totalAlumnos: 0,
+            totalModulosAvaliados: 0,
+            listaxesPorCategoria: null,
+            modulosOrdenados: null
+        };
+        
+        let dataTableModulos = null;
+
+        // Establecer data actual por defecto
+        document.getElementById('dataActa').valueAsDate = new Date();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const csvFileInput = document.getElementById('csvFileInput');
+            const analizarBtn = document.getElementById('analizarBtn');
+            const exportarActaBtn = document.getElementById('exportarActaBtn');
+            const informesContainer = document.getElementById('informesContainer');
+            const mensaxeInicial = document.getElementById('mensaxeInicial');
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            csvFileInput.addEventListener('change', () => {
+                analizarBtn.disabled = csvFileInput.files.length === 0;
+            });
+
+            analizarBtn.addEventListener('click', () => {
+                const file = csvFileInput.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evento) => procesarContidoCSV(evento.target.result);
+                reader.onerror = () => mensaxeInicial.innerHTML = `<p style="color:red;"><b>Erro:</b> Non se puido ler o ficheiro.</p>`;
+                reader.readAsText(file, 'UTF-8');
+            });
+
+            exportarActaBtn.addEventListener('click', xerarActaODT);
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    const activeTab = document.getElementById(button.dataset.tab);
+                    activeTab.classList.add('active');
+                    
+                    if (button.dataset.tab === 'informeModulos' && dataTableModulos) {
+                        setTimeout(() => {
+                            dataTableModulos.columns.adjust().draw();
+                        }, 100);
+                    }
+                });
+            });
+
+            function procesarContidoCSV(contenido) {
+                const estadisticasModulos = {};
+                const datosPorAlumno = {};
+                let infoCiclo = { nome: '', curso: '' };
+                const lineas = contenido.split('\n').filter(linea => linea.trim() !== '');
+
+                if (lineas.length < 2) {
+                    mensaxeInicial.innerHTML = "<p>O ficheiro está baleiro ou só contén a cabeceira.</p>";
+                    return;
+                }
+
+                const cabecera = lineas[0].split(';').map(h => h.replace(/^"|"$/g, '').trim());
+                const datos = lineas.slice(1);
+
+                const idxDoi = cabecera.indexOf('Nº DOI');
+                const idxApelido1 = cabecera.indexOf('1º APELIDO');
+                const idxApelido2 = cabecera.indexOf('2º APELIDO');
+                const idxNome = cabecera.indexOf('NOME');
+                const idxMateria = cabecera.indexOf('MATERIA');
+                const idxCualificacion = cabecera.indexOf('CUALIFICACIÓN');
+                const idxCurso = cabecera.indexOf('CURSO');
+
+                if ([idxDoi, idxNome, idxMateria, idxCualificacion, idxApelido1, idxApelido2, idxCurso].includes(-1)) {
+                    mensaxeInicial.innerHTML = `<p style="color:red;"><b>Erro:</b> Faltan columnas esenciais no ficheiro CSV.</p>`;
+                    return;
+                }
+
+                for (const linea of datos) {
+                    const campos = linea.split(';').map(c => c.replace(/^"|"$/g, '').trim());
+                    const doi = campos[idxDoi];
+                    const materia = campos[idxMateria];
+                    const cualificacionStr = campos[idxCualificacion];
+
+                    if (!doi || !materia) continue;
+
+                    if (!infoCiclo.curso) {
+                        infoCiclo.curso = campos[idxCurso];
+                    }
+
+                    if (!estadisticasModulos[materia]) {
+                        estadisticasModulos[materia] = { matriculados: 0, avaliados: 0, aprobados: 0, suspensos: 0 };
+                    }
+                    estadisticasModulos[materia].matriculados++;
+
+                    if (!datosPorAlumno[doi]) {
+                        const apelidos = [campos[idxApelido1], campos[idxApelido2]].filter(Boolean).join(' ');
+                        const nomeCompleto = apelidos ? `${apelidos}, ${campos[idxNome]}` : campos[idxNome];
+                        datosPorAlumno[doi] = { nomeCompleto, suspensos: 0, avaliados: 0 };
+                    }
+
+                    if (cualificacionStr.toLowerCase() !== 'sen cualificar' && cualificacionStr !== '') {
+                        const nota = parseInt(cualificacionStr, 10);
+                        if (!isNaN(nota)) {
+                            estadisticasModulos[materia].avaliados++;
+                            nota >= 5 ? estadisticasModulos[materia].aprobados++ : estadisticasModulos[materia].suspensos++;
+                            datosPorAlumno[doi].avaliados++;
+                            if (nota < 5) datosPorAlumno[doi].suspensos++;
+                        }
+                    }
+                }
+
+                // Calcular estatísticas de suspensos e listaxes
+                const contadorSuspensos = {
+                    0: 0, 1: 0, 2: 0, 3: 0, 4: 0, '5+': 0, 'todos': 0
+                };
+                const listaxesPorCategoria = {
+                    0: [], 1: [], 2: [], 3: [], 4: [], '5+': [], 'todos': []
+                };
+                let totalAlumnos = 0;
+                let totalModulosAvaliados = 0;
+
+                for (const doi in datosPorAlumno) {
+                    const alumno = datosPorAlumno[doi];
+                    totalAlumnos++;
+                    totalModulosAvaliados += alumno.avaliados;
+
+                    if (alumno.avaliados > 0) {
+                        if (alumno.suspensos === 0) {
+                            contadorSuspensos[0]++;
+                            listaxesPorCategoria[0].push(alumno.nomeCompleto);
+                        } else if (alumno.suspensos === 1) {
+                            contadorSuspensos[1]++;
+                            listaxesPorCategoria[1].push(alumno.nomeCompleto);
+                        } else if (alumno.suspensos === 2) {
+                            contadorSuspensos[2]++;
+                            listaxesPorCategoria[2].push(alumno.nomeCompleto);
+                        } else if (alumno.suspensos === 3) {
+                            contadorSuspensos[3]++;
+                            listaxesPorCategoria[3].push(alumno.nomeCompleto);
+                        } else if (alumno.suspensos === 4) {
+                            contadorSuspensos[4]++;
+                            listaxesPorCategoria[4].push(alumno.nomeCompleto);
+                        } else {
+                            contadorSuspensos['5+']++;
+                            listaxesPorCategoria['5+'].push(alumno.nomeCompleto);
+                        }
+
+                        if (alumno.suspensos === alumno.avaliados && alumno.avaliados > 0) {
+                            contadorSuspensos['todos']++;
+                            listaxesPorCategoria['todos'].push(alumno.nomeCompleto);
+                        }
+                    }
+                }
+                
+                // Ordenar listaxes alfabeticamente
+                for (const categoria in listaxesPorCategoria) {
+                    listaxesPorCategoria[categoria].sort((a, b) => a.localeCompare(b, 'gl'));
+                }
+                
+                // Ordenar módulos por nome
+                const modulosOrdenados = Object.keys(estadisticasModulos).sort((a, b) => a.localeCompare(b, 'gl'));
+
+                datosAnalise = {
+                    estadisticasModulos,
+                    datosPorAlumno,
+                    infoCiclo,
+                    contadorSuspensos,
+                    totalAlumnos,
+                    totalModulosAvaliados,
+                    listaxesPorCategoria,
+                    modulosOrdenados
+                };
+
+                informesContainer.style.display = 'block';
+                mensaxeInicial.style.display = 'none';
+                document.getElementById('exportarActaBtn').disabled = false;
+
+                document.getElementById('informeModulos').innerHTML = xerarInformeModulos(estadisticasModulos);
+                document.getElementById('informeAlumnado').innerHTML = xerarInformeAlumnado(datosAnalise);
+                
+                inicializarDataTableModulos();
+                tabButtons[0].click();
+            }
+            
+            function inicializarDataTableModulos() {
+                if (dataTableModulos) {
+                    dataTableModulos.destroy();
+                }
+                
+                const tablaModulos = document.querySelector('#informeModulos table');
+                if (tablaModulos) {
+                    dataTableModulos = $(tablaModulos).DataTable({
+                        language: {
+                            url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/gl.json',
+                            search: "Buscar:",
+                            lengthMenu: "Mostrar _MENU_ rexistros",
+                            info: "Mostrando _START_ a _END_ de _TOTAL_ rexistros",
+                            paginate: {
+                                first: "Primeiro",
+                                last: "Último",
+                                next: "Seguinte",
+                                previous: "Anterior"
+                            }
+                        },
+                        pageLength: 10,
+                        order: [[0, 'asc']]
+                    });
+                }
+            }
+
+            function xerarInformeModulos(estadisticas) {
+                let tablaHTML = `<div class="table-container">
+                    <table class="summary-table">
+                        <thead>
+                            <tr><th>Módulo</th><th>Matriculados</th><th>Avaliados</th><th>Aprobados</th><th>% Aprobados</th><th>Suspensos</th><th>% Suspensos</th></tr>
+                        </thead>
+                        <tbody>`;
+                for (const materia in estadisticas) {
+                    const stats = estadisticas[materia];
+                    const porcAprobados = stats.avaliados > 0 ? (stats.aprobados / stats.avaliados * 100).toFixed(2) : "0.00";
+                    const porcSuspensos = stats.avaliados > 0 ? (stats.suspensos / stats.avaliados * 100).toFixed(2) : "0.00";
+                    tablaHTML += `<tr><td class="left-align-cell">${materia}</td><td>${stats.matriculados}</td><td>${stats.avaliados}</td><td>${stats.aprobados}</td><td>${porcAprobados}%</td><td>${stats.suspensos}</td><td>${porcSuspensos}%</td></tr>`;
+                }
+                return tablaHTML + `</tbody></table></div>`;
+            }
+
+            function xerarInformeAlumnado(datos) {
+                const { contadorSuspensos, totalAlumnos, listaxesPorCategoria } = datos;
+                const porcentaxes = {};
+                for (const key in contadorSuspensos) {
+                    porcentaxes[key] = totalAlumnos > 0 ? ((contadorSuspensos[key] / totalAlumnos) * 100).toFixed(2) : '0.00';
+                }
+                
+                let html = `<div class="table-container">
+                    <table class="summary-table">
+                        <thead><tr><th>Situación do Alumnado</th><th>Nº</th><th>%</th><th>Listaxe</th></tr></thead>
+                        <tbody>
+                            <tr><td class="left-align-cell">TODAS APROBADAS</td><td>${contadorSuspensos[0]}</td><td>${porcentaxes[0]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[0].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                            <tr><td class="left-align-cell">1 SUSPENSA</td><td>${contadorSuspensos[1]}</td><td>${porcentaxes[1]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[1].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                            <tr><td class="left-align-cell">2 SUSPENSAS</td><td>${contadorSuspensos[2]}</td><td>${porcentaxes[2]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[2].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                            <tr><td class="left-align-cell">3 SUSPENSAS</td><td>${contadorSuspensos[3]}</td><td>${porcentaxes[3]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[3].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                            <tr><td class="left-align-cell">4 SUSPENSAS</td><td>${contadorSuspensos[4]}</td><td>${porcentaxes[4]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[4].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                            <tr><td class="left-align-cell">5+ SUSPENSAS</td><td>${contadorSuspensos['5+']}</td><td>${porcentaxes['5+']}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria['5+'].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                            <tr><td class="left-align-cell">TODAS SUSPENSAS</td><td>${contadorSuspensos['todos']}</td><td>${porcentaxes['todos']}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria['todos'].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                            <tr style="background:#f0f0f0; font-weight:bold;"><td class="left-align-cell">TOTAL ALUMNOS</td><td>${totalAlumnos}</td><td>100%</td><td>-</td></tr>
+                        </tbody>
+                    </table>
+                </div>`;
+                return html;
+            }
+
+            function xerarActaODT() {
+                if (!datosAnalise.estadisticasModulos) {
+                    alert('Primeiro analiza un ficheiro CSV');
+                    return;
+                }
+
+                const dataRaw = document.getElementById('dataActa').value;
+                const dataFormateada = dataRaw ? new Date(dataRaw).toLocaleDateString('gl-ES', {year: 'numeric', month: 'long', day: 'numeric'}) : new Date().toLocaleDateString('gl-ES', {year: 'numeric', month: 'long', day: 'numeric'});
+                const titor = document.getElementById('titorActa').value;
+                const curso = document.getElementById('cursoActa').value;
+                const grupo = document.getElementById('grupoActa').value;
+                const valoracionXeral = document.getElementById('valoracionXeral').value || '_________________________________________';
+                const acordosGrupo = document.getElementById('acordosGrupo').value || '_________________________________________';
+                const observacions = document.getElementById('observacions').value || '_________________________________________';
+
+                const { estadisticasModulos, contadorSuspensos, totalAlumnos, modulosOrdenados } = datosAnalise;
+                
+                const porcentaxes = {};
+                for (const key in contadorSuspensos) {
+                    porcentaxes[key] = totalAlumnos > 0 ? ((contadorSuspensos[key] / totalAlumnos) * 100).toFixed(1) : '0';
+                }
+                
+                // Xerar táboa de suspensos por módulo
+                let tabelaSuspensosModulos = '';
+                for (const modulo of modulosOrdenados) {
+                    const stats = estadisticasModulos[modulo];
+                    const porc = stats.avaliados > 0 ? (stats.suspensos / stats.avaliados * 100).toFixed(1) : '0';
+                    tabelaSuspensosModulos += `
+                        <tr>
+                            <td width="375" style="border-top: none; border-bottom: 1px solid #000000; border-left: 1px solid #000000; border-right: none; padding: 0.1cm 0.19cm;"><p class="western">${modulo}</p></td>
+                            <td colspan="2" width="61" style="border-top: none; border-bottom: 1px solid #000000; border-left: 1px solid #000000; border-right: none; padding: 0.1cm 0.19cm;"><p class="western" align="center">${stats.matriculados}</p></td>
+                            <td colspan="2" width="79" style="border-top: none; border-bottom: 1px solid #000000; border-left: 1px solid #000000; border-right: none; padding: 0.1cm 0.19cm;"><p class="western" align="center">${stats.suspensos}</p></td>
+                            <td colspan="2" width="63" style="border-top: none; border-bottom: 1px solid #000000; border-left: 1px solid #000000; border-right: 1px solid #000000; padding: 0.1cm 0.19cm;"><p class="western" align="center">${porc}%</p></td>
+                        </tr>`;
+                }
+                
+                // Identificar módulos con maiores dificultades
+                const modulosConDificultades = modulosOrdenados
+                    .map(m => ({ materia: m, suspensos: estadisticasModulos[m].suspensos, porcentaxe: estadisticasModulos[m].avaliados > 0 ? (estadisticasModulos[m].suspensos / estadisticasModulos[m].avaliados * 100).toFixed(1) : 0 }))
+                    .sort((a, b) => b.suspensos - a.suspensos)
+                    .slice(0, 3);
+                
+                const dificultadesTexto = modulosConDificultades.length > 0 
+                    ? modulosConDificultades.map(m => `${m.materia} (${m.suspensos} suspensos, ${m.porcentaxe}%)`).join('; ')
+                    : 'Non se detectaron dificultades significativas';
+
+                // Construír a plantilla HTML completa
+                const plantillaHTML = `<!DOCTYPE html>
+                <html>
+                <head>
+                    <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+                    <title>Acta Xunta Avaliación - ${grupo}</title>
+                    <style>
+                        @page { margin-left: 2.5cm; margin-right: 2.5cm; margin-top: 1.27cm; margin-bottom: 0.8cm }
+                        body { font-family: "Times New Roman", serif; font-size: 12pt; margin: 0; padding: 0; }
+                        p { widows: 2; color: #000000; line-height: 115%; text-align: left; orphans: 2; margin-bottom: 0.25cm; direction: ltr }
+                        p.western { font-family: "Times New Roman", serif; font-size: 12pt; }
+                        td p { widows: 0; color: #000000; text-align: left; orphans: 0; margin-bottom: 0cm; direction: ltr }
+                        table { border-collapse: collapse; width: 100%; }
+                        td, th { border: 1px solid #000000; padding: 0.1cm 0.19cm; vertical-align: top; }
+                    </style>
+                </head>
+                <body lang="es-ES" text="#000000" dir="ltr">
+                    <div title="header"><p style="margin-bottom: 0cm; line-height: 100%"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='605' height='86' viewBox='0 0 605 86'%3E%3Crect width='605' height='86' fill='%233498db'/%3E%3Ctext x='20' y='50' fill='white' font-size='24' font-weight='bold'%3EXUNTA DE AVALIACIÓN%3C/text%3E%3C/svg%3E" name="Imagen1" align="bottom" width="605" height="86" border="0"/></p></div>
+                    
+                    <p class="western" align="center" style="margin-bottom: 0cm; line-height: 150%"><font face="Trebuchet MS, sans-serif"><font size="5" style="font-size: 20pt"><span lang="gl-ES"><b>ACTA DA XUNTA DA 1ª AVALIACIÓN</b></span></font></font></p>
+                    
+                    <table width="622" cellpadding="7" cellspacing="0">
+                        <tr><td width="177"><p lang="gl-ES" class="western" align="center"><b>CURSO</b></p></td><td width="178"><p lang="gl-ES" class="western" align="center"><b>GRUPO</b></p></td><td width="223"><p lang="gl-ES" class="western" align="center"><b>DATA</b></p></td></tr>
+                        <tr><td><p lang="gl-ES" class="western" align="center" style="font-variant: small-caps"><b>${curso}</b></p></td><td><p lang="gl-ES" class="western" align="center"><b>${grupo}</b></p></td><td><p lang="gl-ES" class="western" align="center"><b>${dataFormateada}</b></p></td></tr>
+                        <tr><td><p lang="gl-ES" class="western" align="center"><b>TITOR/A:</b></p></td><td colspan="2"><p lang="gl-ES" class="western" style="font-variant: small-caps"><b>${titor}</b></p></td></tr>
+                    </table>
+                    
+                    <table width="635" cellpadding="7" cellspacing="0">
+                        <tr><td colspan="7"><p lang="gl-ES" class="western" align="center"><b>VALORACIÓN XERAL DO GRUPO</b></p></td></tr>
+                        <tr><td colspan="7"><p class="western">${valoracionXeral.replace(/\n/g, '<br>')}</p></td></tr>
+                        <tr><td colspan="7"><br></td></tr>
+                        <tr><td colspan="7"><p lang="gl-ES" class="western" align="center" style="text-transform: uppercase"><b>número de ALUMNADO CON x materias suspensas</b></p></td></tr>
+                        <tr><td colspan="2"><p lang="gl-ES" class="western" align="center"><b>Situación académica</b></p></td><td colspan="2"><p lang="gl-ES" class="western" align="center"><b>Total</b></p></td><td colspan="3"><p lang="gl-ES" class="western" align="center"><b>%</b></p></td></tr>
+                        <tr><td colspan="2"><p class="western">Alumnado con TODAS as materias APROBADAS</p></td><td colspan="2"><p class="western" align="center">${contadorSuspensos[0]}</p></td><td colspan="3"><p class="western" align="center">${porcentaxes[0]}%</p></td></tr>
+                        <tr><td colspan="2"><p class="western">Alumnado con só 1 materia SUSPENSA</p></td><td colspan="2"><p class="western" align="center">${contadorSuspensos[1]}</p></td><td colspan="3"><p class="western" align="center">${porcentaxes[1]}%</p></td></tr>
+                        <tr><td colspan="2"><p class="western">Alumnado con 2 materias SUSPENSAS</p></td><td colspan="2"><p class="western" align="center">${contadorSuspensos[2]}</p></td><td colspan="3"><p class="western" align="center">${porcentaxes[2]}%</p></td></tr>
+                        <tr><td colspan="2"><p class="western">Alumnado con 3 materias SUSPENSAS</p></td><td colspan="2"><p class="western" align="center">${contadorSuspensos[3]}</p></td><td colspan="3"><p class="western" align="center">${porcentaxes[3]}%</p></td></tr>
+                        <tr><td colspan="2"><p class="western">Alumnado con 4 materias SUSPENSAS</p></td><td colspan="2"><p class="western" align="center">${contadorSuspensos[4]}</p></td><td colspan="3"><p class="western" align="center">${porcentaxes[4]}%</p></td></tr>
+                        <tr><td colspan="2"><p class="western">Alumnado con 5 OU MÁIS materias SUSPENSAS</p></td><td colspan="2"><p class="western" align="center">${contadorSuspensos['5+']}</p></td><td colspan="3"><p class="western" align="center">${porcentaxes['5+']}%</p></td></tr>
+                        <tr><td colspan="2"><p class="western">Alumnado con TODAS as materias SUSPENSAS</p></td><td colspan="2"><p class="western" align="center">${contadorSuspensos['todos']}</p></td><td colspan="3"><p class="western" align="center">${porcentaxes['todos']}%</p></td></tr>
+                        <tr><td colspan="2"><p class="western"><b>TOTAL ALUMNOS/AS DO GRUPO</b></p></td><td colspan="2"><p class="western" align="center"><b>${totalAlumnos}</b></p></td><td colspan="3"><p class="western" align="center"><b>100%</b></p></td></tr>
+                        <tr><td colspan="7"><br></td></tr>
+                        <tr><td colspan="7"><p lang="gl-ES" class="western" align="center" style="text-transform: uppercase"><b>número de alumnADO suspenso por materia/MÓDULO</b></p></td></tr>
+                        <tr><td width="375"><p class="western" align="center"><b>Materia / Módulo</b></p></td><td colspan="2"><p class="western" align="center"><b>Total</b></p></td><td colspan="2"><p class="western" align="center"><b>SUSPENSO</b></p></td><td colspan="2"><p class="western" align="center"><b>%</b></p></td></tr>
+                        ${tabelaSuspensosModulos}
+                        <tr><td colspan="6"><br></td><td></td></tr>
+                        <tr><td colspan="6"><p lang="gl-ES" class="western" align="center"><b>MATERIAS/MÓDULOS NAS QUE SE CONCENTRAN AS MAIORES DIFICULTADES</b></p></td><td></td></tr>
+                        <tr><td colspan="6"><p class="western">${dificultadesTexto}</p></td><td></td></tr>
+                    </table>
+                    
+                    <table width="612" cellpadding="7" cellspacing="0">
+                        <tr><td><p lang="gl-ES" class="western" align="center"><b>ACORDOS TOMADOS EN RELACIÓN AO GRUPO</b></p></td></tr>
+                        <tr><td><p class="western">${acordosGrupo.replace(/\n/g, '<br>')}</p></td></tr>
+                    </table>
+                    
+                    <table width="612" cellpadding="6" cellspacing="0">
+                        <tr><td colspan="2"><p lang="gl-ES" class="western" align="center"><b>ACORDOS TOMADOS RESPECTO DO ALUMNADO CON DIFICULTADES DE APRENDIZAXE (MEDIDAS CURRICULARES)</b></p></td></tr>
+                        <tr><td colspan="2"><p lang="gl-ES" class="western"><font size="2">MEDIDAS: Reforzo (Ref); Apoio (Apo); ACS; Cambio de optativa (Opt); Inmersión lingüística (IL); Flexibilización (Flex)</font></p></td></tr>
+                        <tr><td width="202"><p lang="gl-ES" class="western" align="center">ALUMNO/A</p></td><td width="384"><p lang="gl-ES" class="western" align="center">MATERIAS / MÓDULOS (MEDIDA)</p></td></tr>
+                        <tr><td><br></td><td><br></td></tr>
+                    </table>
+                    
+                    <table width="612" cellpadding="2" cellspacing="0">
+                        <tr><td colspan="2"><p lang="gl-ES" class="western" align="center"><b>ACORDOS TOMADOS RESPECTO DO ALUMNADO CON PROBLEMAS DE COMPORTAMENTO E ASISTENCIA (MEDIDAS ORGANIZATIVAS)</b></p></td></tr>
+                        <tr><td colspan="2"><p lang="gl-ES" class="western"><font size="2">MEDIDAS: Cambio de grupo; cambio de situación na aula; medidas de control ante determinado alumnado; protocolo de absentismo; perda do dereito á avaliación continua; abandono materia</font></p></td></tr>
+                        <tr><td width="210"><p lang="gl-ES" class="western" align="center">ALUMNO/A</p></td><td width="392"><p lang="gl-ES" class="western" align="center">MEDIDA/S</p></td></tr>
+                        <tr><td><br></td><td><br></td></tr>
+                    </table>
+                    
+                    <table width="612" cellpadding="2" cellspacing="0">
+                        <tr><td colspan="2"><p lang="gl-ES" class="western" align="center"><b>SOLICITUDE DO EQUIPO DOCENTE PARA QUE O TITOR/A FALE CO ALUMNADO QUE SE INDICA, POLOS MOTIVOS QUE SE ESPECIFICAN</b></p></td></tr>
+                        <tr><td width="210"><p lang="gl-ES" class="western" align="center">ALUMNO/A</p></td><td width="392"><p lang="gl-ES" class="western" align="center">MOTIVOS</p></td></tr>
+                        <tr><td><br></td><td><br></td></tr>
+                    </table>
+                    
+                    <table width="612" cellpadding="2" cellspacing="0">
+                        <tr><td colspan="2"><p lang="gl-ES" class="western" align="center"><b>SOLICITUDE DO EQUIPO DOCENTE PARA QUE O TITOR/A FALE COAS FAMILIAS DO ALUMNADO QUE SE INDICA, POLOS MOTIVOS QUE SE ESPECIFICAN</b></p></td></tr>
+                        <tr><td width="210"><p lang="gl-ES" class="western" align="center">FAMILIA DO ALUMNO/A</p></td><td width="392"><p lang="gl-ES" class="western" align="center">MOTIVOS</p></td></tr>
+                        <tr><td><br></td><td><br></td></tr>
+                    </table>
+                    
+                    <table width="612" cellpadding="7" cellspacing="0">
+                        <tr><td><p lang="gl-ES" class="western" align="center"><b>OUTRAS OBSERVACIÓNS</b></p></td></tr>
+                        <tr><td><p class="western">${observacions.replace(/\n/g, '<br>')}</p></td></tr>
+                    </table>
+                    
+                    <p lang="gl-ES" class="western" align="right" style="margin-top: 0.42cm;">Marín, a ${dataFormateada}</p>
+                    <p lang="gl-ES" class="western" align="right">O/A Titor/a</p>
+                    <p class="western" align="right">Asdo.: <i><b>${titor}</b></i></p>
+                </body>
+                </html>`;
+
+                const blob = new Blob([plantillaHTML], { type: 'application/vnd.oasis.opendocument.text' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Acta_Xunta_Avaliacion_${grupo}_${curso}_${dataFormateada.replace(/\//g, '-')}.odt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                alert('✅ Acta xerada correctamente!');
+            }
+        });
+    </script>
+</body>
+</html>
