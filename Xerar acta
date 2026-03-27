@@ -1,0 +1,431 @@
+async function xerarActaHTML() {
+    try {
+        // 1. Verificar datos
+        if (!datosAnalise || !datosAnalise.estadisticasModulos) {
+            alert('⚠️ Primeiro analiza un ficheiro CSV');
+            return;
+        }
+        
+        const exportarBtn = document.getElementById('exportarActaBtn');
+        const textoOrixinal = exportarBtn.textContent;
+        exportarBtn.textContent = '⏳ Xerando acta...';
+        exportarBtn.disabled = true;
+        
+        // 2. Obter datos do formulario
+        const dataRaw = document.getElementById('dataActa').value;
+        const dataFormateada = dataRaw ? new Date(dataRaw).toLocaleDateString('gl-ES', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        }) : new Date().toLocaleDateString('gl-ES', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        });
+        
+        const titor = document.getElementById('titorActa').value.trim() || 'Óscar Núñez Aguado';
+        const curso = document.getElementById('cursoActa').value.trim() || '2025-26';
+        const grupo = document.getElementById('grupoActa').value.trim() || 'DAM1';
+        const valoracionXeral = document.getElementById('valoracionXeral').value.trim() || '';
+        const acordosGrupo = document.getElementById('acordosGrupo').value.trim() || '';
+        const observacions = document.getElementById('observacions').value.trim() || '';
+        
+        const { estadisticasModulos, contadorSuspensos, totalAlumnos, modulosOrdenados, listaxesPorCategoria } = datosAnalise;
+        
+        // 3. Calcular porcentaxes
+        const porcentaxes = {};
+        for (const key in contadorSuspensos) {
+            porcentaxes[key] = totalAlumnos > 0 ? ((contadorSuspensos[key] / totalAlumnos) * 100).toFixed(1) : '0';
+        }
+        
+        // 4. Xerar filas da táboa de módulos
+        let filasModulos = '';
+        for (const modulo of modulosOrdenados) {
+            const stats = estadisticasModulos[modulo];
+            const porc = stats.avaliados > 0 ? (stats.suspensos / stats.avaliados * 100).toFixed(1) : '0';
+            filasModulos += `
+                <tr>
+                    <td style="border: 1px solid #000; padding: 6px;">${modulo}</td>
+                    <td style="border: 1px solid #000; padding: 6px; text-align: center;">${stats.matriculados}</td>
+                    <td style="border: 1px solid #000; padding: 6px; text-align: center;">${stats.suspensos}</td>
+                    <td style="border: 1px solid #000; padding: 6px; text-align: center;">${porc}%</td>
+                </tr>
+            `;
+        }
+        
+        // 5. Xerar listaxes de alumnos
+        const xerarListaxe = (alumnos) => {
+            if (!alumnos || alumnos.length === 0) return '—';
+            return alumnos.map(nome => `• ${nome}`).join('<br>');
+        };
+        
+        // 6. Identificar módulos con maiores dificultades
+        const modulosDificultades = modulosOrdenados
+            .map(modulo => {
+                const stats = estadisticasModulos[modulo];
+                const porc = stats.avaliados > 0 ? (stats.suspensos / stats.avaliados * 100).toFixed(1) : 0;
+                return { materia: modulo, suspensos: stats.suspensos, porcentaxe: porc };
+            })
+            .sort((a, b) => b.suspensos - a.suspensos)
+            .slice(0, 3);
+        
+        const dificultadesTexto = modulosDificultades.length > 0 
+            ? modulosDificultades.map(m => `<strong>${m.materia}</strong> (${m.suspensos} suspensos, ${m.porcentaxe}%)`).join('<br>')
+            : 'Non se detectaron dificultades significativas';
+        
+        // 7. Xerar o HTML completo con modo edición
+        const htmlContent = `<!DOCTYPE html>
+        <html lang="gl">
+        <head>
+            <meta charset="UTF-8">
+            <title>Acta Xunta Avaliación - ${grupo}</title>
+            <style>
+                /* Estilos para pantalla (edición) */
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                
+                body {
+                    font-family: "Times New Roman", Times, serif;
+                    font-size: 12pt;
+                    line-height: 1.4;
+                    background: #e0e0e0;
+                    padding: 30px 20px;
+                }
+                
+                /* Contedor do documento */
+                .documento {
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    background: white;
+                    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                }
+                
+                /* Contido interno con márxes exactas */
+                .contenido {
+                    padding: 1.27cm 2.5cm 0.8cm 2.5cm;
+                }
+                
+                /* Estilos para impresión */
+                @media print {
+                    body {
+                        background: white;
+                        padding: 0;
+                        margin: 0;
+                    }
+                    .documento {
+                        box-shadow: none;
+                        margin: 0;
+                    }
+                    .contenido {
+                        padding: 0;
+                        margin: 0;
+                    }
+                    @page {
+                        size: A4;
+                        margin: 1.27cm 2.5cm 0.8cm 2.5cm;
+                    }
+                    .no-print {
+                        display: none;
+                    }
+                    .editable {
+                        border: none;
+                        background: transparent;
+                    }
+                }
+                
+                /* Estilos para edición */
+                .no-print {
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    z-index: 1000;
+                    display: flex;
+                    gap: 10px;
+                }
+                
+                .btn-print {
+                    background: #3498db;
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: bold;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                }
+                
+                .btn-save {
+                    background: #27ae60;
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: bold;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                }
+                
+                .btn-print:hover, .btn-save:hover {
+                    opacity: 0.9;
+                    transform: translateY(-2px);
+                }
+                
+                h1 {
+                    text-align: center;
+                    font-size: 18pt;
+                    text-transform: uppercase;
+                    margin: 20px 0 25px 0;
+                    font-family: "Trebuchet MS", sans-serif;
+                }
+                
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 15px 0;
+                }
+                
+                td, th {
+                    border: 1px solid #000000;
+                    padding: 6px 8px;
+                    vertical-align: top;
+                }
+                
+                th {
+                    background-color: #f5f5f5;
+                    font-weight: bold;
+                    text-align: center;
+                }
+                
+                .section-title {
+                    font-size: 13pt;
+                    font-weight: bold;
+                    margin: 20px 0 10px 0;
+                    background-color: #f0f0f0;
+                    padding: 5px 8px;
+                    border-left: 4px solid #2c3e50;
+                }
+                
+                .smallcaps {
+                    font-variant: small-caps;
+                }
+                
+                .signature {
+                    margin-top: 50px;
+                    text-align: right;
+                }
+                
+                .signature-line {
+                    margin-top: 40px;
+                    width: 280px;
+                    text-align: center;
+                    border-top: 1px solid black;
+                    margin-left: auto;
+                    padding-top: 8px;
+                }
+                
+                /* Campos editables */
+                .editable {
+                    background-color: #fff9e6;
+                    padding: 12px;
+                    margin: 10px 0;
+                    border: 1px dashed #e67e22;
+                    border-radius: 4px;
+                    min-height: 80px;
+                }
+                
+                .editable:focus {
+                    outline: none;
+                    border-color: #3498db;
+                    background-color: #fff;
+                }
+                
+                .editable[contenteditable="true"]:empty:before {
+                    content: attr(data-placeholder);
+                    color: #999;
+                    font-style: italic;
+                }
+                
+                .text-center {
+                    text-align: center;
+                }
+                
+                .bold {
+                    font-weight: bold;
+                }
+                
+                .listaxe {
+                    max-height: 200px;
+                    overflow-y: auto;
+                    text-align: left;
+                }
+                
+                hr {
+                    margin: 20px 0;
+                }
+                
+                .info-footer {
+                    margin-top: 30px;
+                    font-size: 9pt;
+                    text-align: center;
+                    color: #666;
+                    border-top: 1px solid #ddd;
+                    padding-top: 15px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="documento">
+                <div class="contenido">
+                    <h1>ACTA DA XUNTA DA 1ª AVALIACIÓN</h1>
+                    
+                    <!-- Táboa de datos xerais -->
+                    <table style="width: 100%; margin-bottom: 20px;">
+                        <tr>
+                            <td style="width: 33%; text-align: center;"><strong>CURSO</strong><br><span class="smallcaps">${curso}</span></td>
+                            <td style="width: 33%; text-align: center;"><strong>GRUPO</strong><br><span class="smallcaps">${grupo}</span></td>
+                            <td style="width: 34%; text-align: center;"><strong>DATA</strong><br>${dataFormateada}</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: center;"><strong>TITOR/A:</strong></td>
+                            <td colspan="2"><span class="smallcaps"><strong>${titor}</strong></span></td>
+                        </tr>
+                    </table>
+                    
+                    <!-- Sección 1: Valoración xeral (EDITABLE) -->
+                    <div class="section-title">1. VALORACIÓN XERAL DO GRUPO</div>
+                    <div class="editable" contenteditable="true" data-placeholder="Escribe aquí a valoración xeral do grupo...">
+                        ${valoracionXeral || ''}
+                    </div>
+                    
+                    <!-- Sección 2: Distribución de suspensos -->
+                    <div class="section-title">2. NÚMERO DE ALUMNADO CON X MATERIAS SUSPENSAS</div>
+                    <table>
+                        <thead>
+                            <tr><th>Situación académica</th><th>Nº</th><th>%</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Alumnado con TODAS as materias APROBADAS</td><td class="text-center">${contadorSuspensos[0] || 0}</td><td class="text-center">${porcentaxes[0]}%</td></tr>
+                            <tr><td>Alumnado con só 1 materia SUSPENSA</td><td class="text-center">${contadorSuspensos[1] || 0}</td><td class="text-center">${porcentaxes[1]}%</td></tr>
+                            <tr><td>Alumnado con 2 materias SUSPENSAS</td><td class="text-center">${contadorSuspensos[2] || 0}</td><td class="text-center">${porcentaxes[2]}%</td></tr>
+                            <tr><td>Alumnado con 3 materias SUSPENSAS</td><td class="text-center">${contadorSuspensos[3] || 0}</td><td class="text-center">${porcentaxes[3]}%</td></tr>
+                            <tr><td>Alumnado con 4 materias SUSPENSAS</td><td class="text-center">${contadorSuspensos[4] || 0}</td><td class="text-center">${porcentaxes[4]}%</td></tr>
+                            <tr><td>Alumnado con 5 OU MÁIS materias SUSPENSAS</td><td class="text-center">${contadorSuspensos['5+'] || 0}</td><td class="text-center">${porcentaxes['5+']}%</td></tr>
+                            <tr><td>Alumnado con TODAS as materias SUSPENSAS</td><td class="text-center">${contadorSuspensos['todos'] || 0}</td><td class="text-center">${porcentaxes['todos']}%</td></tr>
+                            <tr style="background:#f0f0f0;"><td class="bold">TOTAL ALUMNOS/AS DO GRUPO</td><td class="text-center bold">${totalAlumnos}</td><td class="text-center bold">100%</td></tr>
+                        </tbody>
+                    </table>
+                    
+                    <!-- Sección 3: Suspensos por módulo -->
+                    <div class="section-title">3. NÚMERO DE ALUMNADO SUSPENSO POR MATERIA/MÓDULO</div>
+                    <table>
+                        <thead>
+                            <tr><th>Materia / Módulo</th><th>Total</th><th>Suspensos</th><th>%</th></tr>
+                        </thead>
+                        <tbody>
+                            ${filasModulos}
+                        </tbody>
+                    </table>
+                    
+                    <!-- Sección 4: Dificultades (EDITABLE) -->
+                    <div class="section-title">4. MATERIAS/MÓDULOS NAS QUE SE CONCENTRAN AS MAIORES DIFICULTADES</div>
+                    <div class="editable" contenteditable="true" data-placeholder="Escribe aquí as materias con maiores dificultades...">
+                        ${dificultadesTexto}
+                    </div>
+                    
+                    <!-- Sección 5: Acordos grupo (EDITABLE) -->
+                    <div class="section-title">5. ACORDOS TOMADOS EN RELACIÓN AO GRUPO</div>
+                    <div class="editable" contenteditable="true" data-placeholder="Escribe aquí os acordos tomados...">
+                        ${acordosGrupo || ''}
+                    </div>
+                    
+                    <!-- Sección 6 -->
+                    <div class="section-title">6. ACORDOS TOMADOS RESPECTO DO ALUMNADO CON DIFICULTADES DE APRENDIZAXE</div>
+                    <div class="editable" contenteditable="true" data-placeholder="Especificar alumnado e medidas (Ref, Apo, ACS, Opt, IL, Flex)...">
+                        <strong>MEDIDAS:</strong> Reforzo (Ref); Apoio (Apo); ACS; Cambio de optativa (Opt); Inmersión lingüística (IL); Flexibilización (Flex)<br><br>
+                    </div>
+                    
+                    <!-- Sección 7 -->
+                    <div class="section-title">7. ACORDOS TOMADOS RESPECTO DO ALUMNADO CON PROBLEMAS DE COMPORTAMENTO E ASISTENCIA</div>
+                    <div class="editable" contenteditable="true" data-placeholder="Especificar alumnado e medidas...">
+                        <strong>MEDIDAS:</strong> Cambio de grupo; cambio de situación na aula; medidas de control; protocolo de absentismo; perda do dereito á avaliación continua; abandono materia<br><br>
+                    </div>
+                    
+                    <!-- Sección 8 -->
+                    <div class="section-title">8. SOLICITUDE DO EQUIPO DOCENTE PARA FALAR CO ALUMNADO</div>
+                    <div class="editable" contenteditable="true" data-placeholder="Alumnado co que se require entrevista individual...">
+                    </div>
+                    
+                    <!-- Sección 9 -->
+                    <div class="section-title">9. SOLICITUDE DO EQUIPO DOCENTE PARA FALAR COAS FAMILIAS</div>
+                    <div class="editable" contenteditable="true" data-placeholder="Familias coas que se require entrevista...">
+                    </div>
+                    
+                    <!-- Sección 10: Observacións (EDITABLE) -->
+                    <div class="section-title">10. OUTRAS OBSERVACIÓNS</div>
+                    <div class="editable" contenteditable="true" data-placeholder="Engade aquí outras observacións...">
+                        ${observacions || ''}
+                    </div>
+                    
+                    <!-- Firma -->
+                    <div class="signature">
+                        <p>Marín, a ${dataFormateada}</p>
+                        <div class="signature-line">
+                            <p>O/A Titor/a</p>
+                            <p class="bold">Asdo.: ${titor}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="info-footer">
+                        <p>📄 Documento editable — Fai clic en calquera área amarela para modificar o texto</p>
+                        <p>🖨️ Para imprimir, usa o botón "Imprimir" ou Ctrl+P</p>
+                        <p>💾 Para gardar como ODT, abre este ficheiro con LibreOffice e selecciona "Gardar como" → "ODT"</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Botóns flotantes -->
+            <div class="no-print">
+                <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
+                <button class="btn-save" onclick="gardarHTML()">💾 Gardar HTML</button>
+            </div>
+            
+            <script>
+                function gardarHTML() {
+                    const htmlContent = document.documentElement.outerHTML;
+                    const blob = new Blob([htmlContent], {type: 'text/html'});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'Acta_Xunta_Avaliacion_${grupo}_${curso}_${dataFormateada.replace(/\\//g, '-')}.html';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    alert('✅ Ficheiro HTML gardado! Podes abrilo despois para seguir editando.');
+                }
+            </script>
+        </body>
+        </html>`;
+        
+        // 8. Abrir nunha nova ventá ou descargar
+        const ventana = window.open('', '_blank');
+        ventana.document.write(htmlContent);
+        ventana.document.close();
+        
+        exportarBtn.textContent = textoOrixinal;
+        exportarBtn.disabled = false;
+        
+        alert('✅ Acta xerada! Abriuse unha nova ventá co documento.\n\n' +
+              '✏️ Podes editar calquera sección facendo clic nas áreas amarelas.\n' +
+              '🖨️ Imprime directamente desde o navegador.\n' +
+              '💾 Garda como HTML para editar despois, ou abre con LibreOffice e garda como ODT.');
+        
+    } catch (error) {
+        console.error('Erro detallado:', error);
+        const exportarBtn = document.getElementById('exportarActaBtn');
+        exportarBtn.textContent = '📄 Xerar Acta';
+        exportarBtn.disabled = false;
+        alert('❌ Erro ao xerar o informe:\n\n' + error.message);
+    }
+}

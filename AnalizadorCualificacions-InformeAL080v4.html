@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="gl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizador de Cualificacións - Xerador de Acta</title>
+    
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .file-input-area {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .file-input-area input[type="file"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+
+        .btn-success:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .tab-container {
+            border-bottom: 2px solid #d0d0d0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 20px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: #e9ecef;
+            font-size: 14px;
+            border-radius: 5px 5px 0 0;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .tab-content-wrapper {
+            border: 1px solid #dee2e6;
+            border-top: none;
+            padding: 20px;
+            border-radius: 0 0 5px 5px;
+            background: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .dataTables_wrapper {
+            margin-top: 10px;
+        }
+        
+        .dataTables_filter input {
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 5px 10px;
+            margin-left: 8px;
+        }
+        
+        .dataTables_length select {
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 5px;
+            margin: 0 5px;
+        }
+        
+        .summary-table {
+            width: 100% !important;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        .summary-table th,
+        .summary-table td {
+            border: 1px solid #a2a2a2;
+            padding: 8px;
+            text-align: center;
+        }
+        
+        .summary-table th {
+            background-color: #e0e0e0;
+            font-weight: bold;
+        }
+        
+        .left-align-cell {
+            text-align: left;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        .listaxe-alumnado {
+            max-height: 300px;
+            overflow-y: auto;
+            text-align: left;
+            line-height: 1.4;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .btn-file {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-file:hover {
+            background: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Analizador de Cualificacións - Xerador de Acta</h1>
+            <p>Selecciona o CSV de cualificacións para analizar e xerar a acta de avaliación</p>
+        </div>
+
+        <div class="main-content">
+            <div class="file-input-area">
+                <input type="file" id="csvFileInput" accept=".csv">
+                <button class="btn btn-primary" id="analizarBtn" disabled>🔍 Analizar Ficheiro</button>
+                <button class="btn btn-success" id="exportarActaBtn" disabled>📄 Xerar Acta</button>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label>📅 Data da Acta</label>
+                    <input type="date" id="dataActa" value="">
+                </div>
+                <div class="form-group">
+                    <label>👨‍🏫 Titor/a</label>
+                    <input type="text" id="titorActa" value="Óscar Núñez Aguado">
+                </div>
+                <div class="form-group">
+                    <label>📚 Curso Escolar</label>
+                    <input type="text" id="cursoActa" value="2025-26">
+                </div>
+                <div class="form-group">
+                    <label>👥 Grupo</label>
+                    <input type="text" id="grupoActa" value="DAM1">
+                </div>
+            </div>
+
+            <div id="informesContainer" style="display: none;">
+                <div class="tab-container">
+                    <button class="tab-btn active" data-tab="informeModulos">Resumo Módulos</button>
+                    <button class="tab-btn" data-tab="informeAlumnado">Resumo Alumnado</button>
+                </div>
+                <div class="tab-content-wrapper">
+                    <div id="informeModulos" class="tab-content active"></div>
+                    <div id="informeAlumnado" class="tab-content"></div>
+                </div>
+            </div>
+            <div id="mensaxeInicial">
+                <p>📁 Selecciona un ficheiro CSV para comezar a análise automática...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- DataTables JS -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    
+    <script>
+        let datosAnalise = {
+            estadisticasModulos: null,
+            datosPorAlumno: null,
+            infoCiclo: null,
+            contadorSuspensos: null,
+            totalAlumnos: 0,
+            totalModulosAvaliados: 0,
+            listaxesPorCategoria: null,
+            modulosOrdenados: null
+        };
+        
+        let dataTableModulos = null;
+
+        // Establecer data actual por defecto
+        document.getElementById('dataActa').valueAsDate = new Date();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const csvFileInput = document.getElementById('csvFileInput');
+            const analizarBtn = document.getElementById('analizarBtn');
+            const exportarActaBtn = document.getElementById('exportarActaBtn');
+            const informesContainer = document.getElementById('informesContainer');
+            const mensaxeInicial = document.getElementById('mensaxeInicial');
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            // Análise automática cando se selecciona un ficheiro
+            csvFileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    analizarBtn.disabled = false;
+                    // Analizar automaticamente
+                    const reader = new FileReader();
+                    reader.onload = (evento) => procesarContidoCSV(evento.target.result);
+                    reader.onerror = () => mensaxeInicial.innerHTML = `<p style="color:red;"><b>Erro:</b> Non se puido ler o ficheiro.</p>`;
+                    reader.readAsText(file, 'UTF-8');
+                } else {
+                    analizarBtn.disabled = true;
+                }
+            });
+
+            analizarBtn.addEventListener('click', () => {
+                const file = csvFileInput.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evento) => procesarContidoCSV(evento.target.result);
+                reader.onerror = () => mensaxeInicial.innerHTML = `<p style="color:red;"><b>Erro:</b> Non se puido ler o ficheiro.</p>`;
+                reader.readAsText(file, 'UTF-8');
+            });
+
+            exportarActaBtn.addEventListener('click', xerarActaHTML);
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    const activeTab = document.getElementById(button.dataset.tab);
+                    activeTab.classList.add('active');
+                    
+                    if (button.dataset.tab === 'informeModulos' && dataTableModulos) {
+                        setTimeout(() => {
+                            dataTableModulos.columns.adjust().draw();
+                        }, 100);
+                    }
+                });
+            });
+
+            function procesarContidoCSV(contenido) {
+                const estadisticasModulos = {};
+                const datosPorAlumno = {};
+                let infoCiclo = { nome: '', curso: '' };
+                const lineas = contenido.split('\n').filter(linea => linea.trim() !== '');
+
+                if (lineas.length < 2) {
+                    mensaxeInicial.innerHTML = "<p>O ficheiro está baleiro ou só contén a cabeceira.</p>";
+                    return;
+                }
+
+                const cabecera = lineas[0].split(';').map(h => h.replace(/^"|"$/g, '').trim());
+                const datos = lineas.slice(1);
+
+                const idxDoi = cabecera.indexOf('Nº DOI');
+                const idxApelido1 = cabecera.indexOf('1º APELIDO');
+                const idxApelido2 = cabecera.indexOf('2º APELIDO');
+                const idxNome = cabecera.indexOf('NOME');
+                const idxMateria = cabecera.indexOf('MATERIA');
+                const idxCualificacion = cabecera.indexOf('CUALIFICACIÓN');
+                const idxCurso = cabecera.indexOf('CURSO');
+
+                if ([idxDoi, idxNome, idxMateria, idxCualificacion, idxApelido1, idxApelido2, idxCurso].includes(-1)) {
+                    mensaxeInicial.innerHTML = `<p style="color:red;"><b>Erro:</b> Faltan columnas esenciais no ficheiro CSV.</p>`;
+                    return;
+                }
+
+                for (const linea of datos) {
+                    const campos = linea.split(';').map(c => c.replace(/^"|"$/g, '').trim());
+                    const doi = campos[idxDoi];
+                    const materia = campos[idxMateria];
+                    const cualificacionStr = campos[idxCualificacion];
+
+                    if (!doi || !materia) continue;
+
+                    if (!infoCiclo.curso) {
+                        infoCiclo.curso = campos[idxCurso];
+                    }
+
+                    if (!estadisticasModulos[materia]) {
+                        estadisticasModulos[materia] = { matriculados: 0, avaliados: 0, aprobados: 0, suspensos: 0 };
+                    }
+                    estadisticasModulos[materia].matriculados++;
+
+                    if (!datosPorAlumno[doi]) {
+                        const apelidos = [campos[idxApelido1], campos[idxApelido2]].filter(Boolean).join(' ');
+                        const nomeCompleto = apelidos ? `${apelidos}, ${campos[idxNome]}` : campos[idxNome];
+                        datosPorAlumno[doi] = { nomeCompleto, suspensos: 0, avaliados: 0 };
+                    }
+
+                    if (cualificacionStr.toLowerCase() !== 'sen cualificar' && cualificacionStr !== '') {
+                        const nota = parseInt(cualificacionStr, 10);
+                        if (!isNaN(nota)) {
+                            estadisticasModulos[materia].avaliados++;
+                            nota >= 5 ? estadisticasModulos[materia].aprobados++ : estadisticasModulos[materia].suspensos++;
+                            datosPorAlumno[doi].avaliados++;
+                            if (nota < 5) datosPorAlumno[doi].suspensos++;
+                        }
+                    }
+                }
+
+                // Calcular estatísticas de suspensos e listaxes
+                const contadorSuspensos = {
+                    0: 0, 1: 0, 2: 0, 3: 0, 4: 0, '5+': 0, 'todos': 0
+                };
+                const listaxesPorCategoria = {
+                    0: [], 1: [], 2: [], 3: [], 4: [], '5+': [], 'todos': []
+                };
+                let totalAlumnos = 0;
+                let totalModulosAvaliados = 0;
+
+                for (const doi in datosPorAlumno) {
+                    const alumno = datosPorAlumno[doi];
+                    totalAlumnos++;
+                    totalModulosAvaliados += alumno.avaliados;
+
+                    if (alumno.avaliados > 0) {
+                        if (alumno.suspensos === 0) {
+                            contadorSuspensos[0]++;
+                            listaxesPorCategoria[0].push(alumno.nomeCompleto);
+                        } else if (alumno.suspensos === 1) {
+                            contadorSuspensos[1]++;
+                            listaxesPorCategoria[1].push(alumno.nomeCompleto);
+                        } else if (alumno.suspensos === 2) {
+                            contadorSuspensos[2]++;
+                            listaxesPorCategoria[2].push(alumno.nomeCompleto);
+                        } else if (alumno.suspensos === 3) {
+                            contadorSuspensos[3]++;
+                            listaxesPorCategoria[3].push(alumno.nomeCompleto);
+                        } else if (alumno.suspensos === 4) {
+                            contadorSuspensos[4]++;
+                            listaxesPorCategoria[4].push(alumno.nomeCompleto);
+                        } else {
+                            contadorSuspensos['5+']++;
+                            listaxesPorCategoria['5+'].push(alumno.nomeCompleto);
+                        }
+
+                        if (alumno.suspensos === alumno.avaliados && alumno.avaliados > 0) {
+                            contadorSuspensos['todos']++;
+                            listaxesPorCategoria['todos'].push(alumno.nomeCompleto);
+                        }
+                    }
+                }
+                
+                // Ordenar listaxes alfabeticamente
+                for (const categoria in listaxesPorCategoria) {
+                    listaxesPorCategoria[categoria].sort((a, b) => a.localeCompare(b, 'gl'));
+                }
+                
+                // Ordenar módulos por nome
+                const modulosOrdenados = Object.keys(estadisticasModulos).sort((a, b) => a.localeCompare(b, 'gl'));
+
+                datosAnalise = {
+                    estadisticasModulos,
+                    datosPorAlumno,
+                    infoCiclo,
+                    contadorSuspensos,
+                    totalAlumnos,
+                    totalModulosAvaliados,
+                    listaxesPorCategoria,
+                    modulosOrdenados
+                };
+
+                informesContainer.style.display = 'block';
+                mensaxeInicial.style.display = 'none';
+                document.getElementById('exportarActaBtn').disabled = false;
+
+                document.getElementById('informeModulos').innerHTML = xerarInformeModulos(estadisticasModulos);
+                document.getElementById('informeAlumnado').innerHTML = xerarInformeAlumnado(datosAnalise);
+                
+                inicializarDataTableModulos();
+                tabButtons[0].click();
+            }
+            
+            function inicializarDataTableModulos() {
+                if (dataTableModulos) {
+                    dataTableModulos.destroy();
+                }
+                
+                const tablaModulos = document.querySelector('#informeModulos table');
+                if (tablaModulos) {
+                    dataTableModulos = $(tablaModulos).DataTable({
+                        language: {
+                            url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/gl.json',
+                            search: "Buscar:",
+                            lengthMenu: "Mostrar _MENU_ rexistros",
+                            info: "Mostrando _START_ a _END_ de _TOTAL_ rexistros",
+                            paginate: {
+                                first: "Primeiro",
+                                last: "Último",
+                                next: "Seguinte",
+                                previous: "Anterior"
+                            }
+                        },
+                        pageLength: 10,
+                        order: [[0, 'asc']]
+                    });
+                }
+            }
+
+            function xerarInformeModulos(estadisticas) {
+                let tablaHTML = `<div class="table-container">
+                    <table class="summary-table">
+                        <thead>
+                            <tr><th>Módulo</th><th>Matriculados</th><th>Avaliados</th><th>Aprobados</th><th>% Aprobados</th><th>Suspensos</th><th>% Suspensos</th></tr>
+                        </thead>
+                        <tbody>`;
+                for (const materia in estadisticas) {
+                    const stats = estadisticas[materia];
+                    const porcAprobados = stats.avaliados > 0 ? (stats.aprobados / stats.avaliados * 100).toFixed(2) : "0.00";
+                    const porcSuspensos = stats.avaliados > 0 ? (stats.suspensos / stats.avaliados * 100).toFixed(2) : "0.00";
+                    tablaHTML += `<tr><td class="left-align-cell">${materia}</td><td>${stats.matriculados}</td><td>${stats.avaliados}</td><td>${stats.aprobados}</td><td>${porcAprobados}%</td><td>${stats.suspensos}</td><td>${porcSuspensos}%</td></tr>`;
+                }
+                return tablaHTML + `</tbody></table></div>`;
+            }
+
+            function xerarInformeAlumnado(datos) {
+                const { contadorSuspensos, totalAlumnos, listaxesPorCategoria } = datos;
+                const porcentaxes = {};
+                for (const key in contadorSuspensos) {
+                    porcentaxes[key] = totalAlumnos > 0 ? ((contadorSuspensos[key] / totalAlumnos) * 100).toFixed(2) : '0.00';
+                }
+                
+                let html = `<div class="table-container">
+                    <table class="summary-table">
+                        <thead><tr><th>Situación do Alumnado</th><th>Nº</th><th>%</th><th>Listaxe</th></tr></thead>
+                        <tbody>
+                            <tr><td class="left-align-cell">TODAS APROBADAS</td><td>${contadorSuspensos[0]}</td><td>${porcentaxes[0]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[0].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                            <tr><td class="left-align-cell">1 SUSPENSA</td><td>${contadorSuspensos[1]}</td><td>${porcentaxes[1]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[1].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                            <tr><td class="left-align-cell">2 SUSPENSAS</td><td>${contadorSuspensos[2]}</td><td>${porcentaxes[2]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[2].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                            <tr><td class="left-align-cell">3 SUSPENSAS</td><td>${contadorSuspensos[3]}</td><td>${porcentaxes[3]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[3].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                            <tr><td class="left-align-cell">4 SUSPENSAS</td><td>${contadorSuspensos[4]}</td><td>${porcentaxes[4]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[4].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                            <tr><td class="left-align-cell">5+ SUSPENSAS</td><td>${contadorSuspensos['5+']}</td><td>${porcentaxes['5+']}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria['5+'].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                            <tr><td class="left-align-cell">TODAS SUSPENSAS</td><td>${contadorSuspensos['todos']}</td><td>${porcentaxes['todos']}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria['todos'].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                            <tr style="background:#f0f0f0; font-weight:bold;"><td class="left-align-cell">TOTAL ALUMNOS</td><td>${totalAlumnos}</td><td>100%</td><td>-</td></tr>
+                        </tbody>
+                    </table>
+                </div>`;
+                return html;
+            }
+
+            function xerarActaHTML() {
+                try {
+                    if (!datosAnalise || !datosAnalise.estadisticasModulos) {
+                        alert('⚠️ Primeiro selecciona un ficheiro CSV');
+                        return;
+                    }
+                    
+                    const exportarBtn = document.getElementById('exportarActaBtn');
+                    const textoOrixinal = exportarBtn.textContent;
+                    exportarBtn.textContent = '⏳ Xerando acta...';
+                    exportarBtn.disabled = true;
+                    
+                    // Obter datos do formulario
+                    const dataRaw = document.getElementById('dataActa').value;
+                    const dataFormateada = dataRaw ? new Date(dataRaw).toLocaleDateString('gl-ES', {
+                        year: 'numeric', month: 'long', day: 'numeric'
+                    }) : new Date().toLocaleDateString('gl-ES', {
+                        year: 'numeric', month: 'long', day: 'numeric'
+                    });
+                    
+                    const titor = document.getElementById('titorActa').value.trim() || 'Óscar Núñez Aguado';
+                    const curso = document.getElementById('cursoActa').value.trim() || '2025-26';
+                    const grupo = document.getElementById('grupoActa').value.trim() || 'DAM1';
+                    
+                    const { estadisticasModulos, contadorSuspensos, totalAlumnos, modulosOrdenados } = datosAnalise;
+                    
+                    // Calcular porcentaxes
+                    const porcentaxes = {};
+                    for (const key in contadorSuspensos) {
+                        porcentaxes[key] = totalAlumnos > 0 ? ((contadorSuspensos[key] / totalAlumnos) * 100).toFixed(1) : '0';
+                    }
+                    
+                    // Xerar filas da táboa de módulos
+                    let filasModulos = '';
+                    for (const modulo of modulosOrdenados) {
+                        const stats = estadisticasModulos[modulo];
+                        const porc = stats.avaliados > 0 ? (stats.suspensos / stats.avaliados * 100).toFixed(1) : '0';
+                        filasModulos += `
+                            <tr>
+                                <td style="border: 1px solid #000; padding: 6px;">${modulo}</td>
+                                <td style="border: 1px solid #000; padding: 6px; text-align: center;">${stats.matriculados}</td>
+                                <td style="border: 1px solid #000; padding: 6px; text-align: center;">${stats.suspensos}</td>
+                                <td style="border: 1px solid #000; padding: 6px; text-align: center;">${porc}%</td>
+                            </tr>
+                        `;
+                    }
+                    
+                    // Identificar módulos con maiores dificultades
+                    const modulosDificultades = modulosOrdenados
+                        .map(modulo => {
+                            const stats = estadisticasModulos[modulo];
+                            const porc = stats.avaliados > 0 ? (stats.suspensos / stats.avaliados * 100).toFixed(1) : 0;
+                            return { materia: modulo, suspensos: stats.suspensos, porcentaxe: porc };
+                        })
+                        .sort((a, b) => b.suspensos - a.suspensos)
+                        .slice(0, 3);
+                    
+                    const dificultadesTexto = modulosDificultades.length > 0 
+                        ? modulosDificultades.map(m => `<strong>${m.materia}</strong> (${m.suspensos} suspensos, ${m.porcentaxe}%)`).join('<br>')
+                        : 'Non se detectaron dificultades significativas';
+                    
+                    // Imaxe de cabeceira (convertida a base64 - substitúe coa túa imaxe real)
+                    // Podes substituír este base64 polo da túa imaxe cabecera.jpg
+                    const headerImage = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="80" viewBox="0 0 800 80">
+                        <rect width="100%" height="80" fill="#2c3e50"/>
+                        <text x="20" y="50" fill="white" font-size="20" font-weight="bold">XUNTA DE GALICIA</text>
+                        <text x="400" y="50" fill="white" font-size="16">Consellería de Educación</text>
+                        <text x="700" y="50" fill="white" font-size="14">${grupo} - ${curso}</text>
+                    </svg>`;
+                    
+                    // Xerar o HTML completo
+                    const htmlContent = `<!DOCTYPE html>
+                    <html lang="gl">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>Acta Xunta Avaliación - ${grupo}</title>
+                        <style>
+                            /* Eliminar márgenes por defecto do navegador */
+                            * {
+                                margin: 0;
+                                padding: 0;
+                                box-sizing: border-box;
+                            }
+                            
+                            body {
+                                font-family: "Times New Roman", Times, serif;
+                                font-size: 12pt;
+                                line-height: 1.4;
+                                background: white;
+                                margin: 0;
+                                padding: 0;
+                            }
+                            
+                            /* Contedor do documento */
+                            .documento {
+                                max-width: 100%;
+                                margin: 0 auto;
+                                background: white;
+                            }
+                            
+                            /* Contido interno con márxes exactas */
+                            .contenido {
+                                padding: 0;
+                                margin: 0;
+                            }
+                            
+                            /* Estilos para impresión - elimina cabeceira e pé do navegador */
+                            @media print {
+                                @page {
+                                    size: A4;
+                                    margin: 1.27cm 2.5cm 0.8cm 2.5cm;
+                                }
+                                body {
+                                    margin: 0;
+                                    padding: 0;
+                                }
+                                /* Eliminar cabeceira e pé do navegador */
+                                @page {
+                                    @top-center {
+                                        content: none;
+                                    }
+                                    @bottom-center {
+                                        content: none;
+                                    }
+                                }
+                                /* Asegurar que a cabeceira personalizada se repite en cada páxina */
+                                .header-repeat {
+                                    position: running(header);
+                                }
+                                .page-break {
+                                    page-break-before: avoid;
+                                }
+                            }
+                            
+                            /* Cabeceira que se repite en cada páxina */
+                            .header-repeat {
+                                margin-bottom: 20px;
+                            }
+                            
+                            .header-repeat img {
+                                width: 100%;
+                                max-width: 100%;
+                                height: auto;
+                            }
+                            
+                            h1 {
+                                text-align: center;
+                                font-size: 18pt;
+                                text-transform: uppercase;
+                                margin: 20px 0 25px 0;
+                                font-family: "Trebuchet MS", sans-serif;
+                            }
+                            
+                            table {
+                                width: 100%;
+                                border-collapse: collapse;
+                                margin: 15px 0;
+                            }
+                            
+                            td, th {
+                                border: 1px solid #000000;
+                                padding: 6px 8px;
+                                vertical-align: top;
+                            }
+                            
+                            th {
+                                background-color: #f5f5f5;
+                                font-weight: bold;
+                                text-align: center;
+                            }
+                            
+                            .section-title {
+                                font-size: 13pt;
+                                font-weight: bold;
+                                margin: 20px 0 10px 0;
+                                background-color: #f0f0f0;
+                                padding: 5px 8px;
+                                border-left: 4px solid #2c3e50;
+                            }
+                            
+                            .smallcaps {
+                                font-variant: small-caps;
+                            }
+                            
+                            .signature {
+                                margin-top: 50px;
+                                text-align: right;
+                            }
+                            
+                            .signature-line {
+                                margin-top: 40px;
+                                width: 280px;
+                                text-align: center;
+                                border-top: 1px solid black;
+                                margin-left: auto;
+                                padding-top: 8px;
+                            }
+                            
+                            /* Campos editables */
+                            .editable {
+                                background-color: #fff9e6;
+                                padding: 12px;
+                                margin: 10px 0;
+                                border: 1px dashed #e67e22;
+                                border-radius: 4px;
+                                min-height: 60px;
+                            }
+                            
+                            .editable:focus {
+                                outline: none;
+                                border-color: #3498db;
+                                background-color: #fff;
+                            }
+                            
+                            .editable[contenteditable="true"]:empty:before {
+                                content: attr(data-placeholder);
+                                color: #999;
+                                font-style: italic;
+                            }
+                            
+                            .text-center {
+                                text-align: center;
+                            }
+                            
+                            .bold {
+                                font-weight: bold;
+                            }
+                            
+                            /* Botón flotante só para edición, non aparece en impresión */
+                            .no-print {
+                                position: fixed;
+                                bottom: 20px;
+                                right: 20px;
+                                z-index: 1000;
+                                display: flex;
+                                gap: 10px;
+                            }
+                            
+                            .btn-save {
+                                background: #27ae60;
+                                color: white;
+                                border: none;
+                                padding: 10px 20px;
+                                border-radius: 5px;
+                                cursor: pointer;
+                                font-size: 14px;
+                                font-weight: bold;
+                                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                            }
+                            
+                            .btn-save:hover {
+                                opacity: 0.9;
+                                transform: translateY(-2px);
+                            }
+                            
+                            @media print {
+                                .no-print {
+                                    display: none;
+                                }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="documento">
+                            <div class="contenido">
+                                <!-- Cabeceira que se repite (usando position running para impresión) -->
+                                <div class="header-repeat" style="margin-bottom: 20px;">
+                                    ${headerImage}
+                                </div>
+                                
+                                <h1>ACTA DA XUNTA DA 1ª AVALIACIÓN</h1>
+                                
+                                <!-- Táboa de datos xerais -->
+                                <table style="width: 100%; margin-bottom: 20px;">
+                                    <tr>
+                                        <td style="width: 33%; text-align: center;"><strong>CURSO</strong><br><span class="smallcaps">${curso}</span></td>
+                                        <td style="width: 33%; text-align: center;"><strong>GRUPO</strong><br><span class="smallcaps">${grupo}</span></td>
+                                        <td style="width: 34%; text-align: center;"><strong>DATA</strong><br>${dataFormateada}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: center;"><strong>TITOR/A:</strong></td>
+                                        <td colspan="2"><span class="smallcaps"><strong>${titor}</strong></span></td>
+                                    </tr>
+                                </table>
+                                
+                                <!-- Sección 1: Valoración xeral (EDITABLE) -->
+                                <div class="section-title">1. VALORACIÓN XERAL DO GRUPO</div>
+                                <div class="editable" contenteditable="true" data-placeholder="Escribe aquí a valoración xeral do grupo..."></div>
+                                
+                                <!-- Sección 2: Distribución de suspensos -->
+                                <div class="section-title">2. NÚMERO DE ALUMNADO CON X MATERIAS SUSPENSAS</div>
+                                <table>
+                                    <thead>
+                                        <tr><th>Situación académica</th><th>Nº</th><th>%</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td>Alumnado con TODAS as materias APROBADAS</td><td class="text-center">${contadorSuspensos[0] || 0}</td><td class="text-center">${porcentaxes[0]}%</td></tr>
+                                        <tr><td>Alumnado con só 1 materia SUSPENSA</td><td class="text-center">${contadorSuspensos[1] || 0}</td><td class="text-center">${porcentaxes[1]}%</td></tr>
+                                        <tr><td>Alumnado con 2 materias SUSPENSAS</td><td class="text-center">${contadorSuspensos[2] || 0}</td><td class="text-center">${porcentaxes[2]}%</td></tr>
+                                        <tr><td>Alumnado con 3 materias SUSPENSAS</td><td class="text-center">${contadorSuspensos[3] || 0}</td><td class="text-center">${porcentaxes[3]}%</td></tr>
+                                        <tr><td>Alumnado con 4 materias SUSPENSAS</td><td class="text-center">${contadorSuspensos[4] || 0}</td><td class="text-center">${porcentaxes[4]}%</td></tr>
+                                        <tr><td>Alumnado con 5 OU MÁIS materias SUSPENSAS</td><td class="text-center">${contadorSuspensos['5+'] || 0}</td><td class="text-center">${porcentaxes['5+']}%</td></tr>
+                                        <tr><td>Alumnado con TODAS as materias SUSPENSAS</td><td class="text-center">${contadorSuspensos['todos'] || 0}</td><td class="text-center">${porcentaxes['todos']}%</td></tr>
+                                        <tr style="background:#f0f0f0;"><td class="bold">TOTAL ALUMNOS/AS DO GRUPO</td><td class="text-center bold">${totalAlumnos}</td><td class="text-center bold">100%</td></tr>
+                                    </tbody>
+                                </table>
+                                
+                                <!-- Sección 3: Suspensos por módulo -->
+                                <div class="section-title">3. NÚMERO DE ALUMNADO SUSPENSO POR MATERIA/MÓDULO</div>
+                                <table>
+                                    <thead>
+                                        <tr><th>Materia / Módulo</th><th>Total</th><th>Suspensos</th><th>%</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        ${filasModulos}
+                                    </tbody>
+                                </table>
+                                
+                                <!-- Sección 4: Dificultades (EDITABLE) -->
+                                <div class="section-title">4. MATERIAS/MÓDULOS NAS QUE SE CONCENTRAN AS MAIORES DIFICULTADES</div>
+                                <div class="editable" contenteditable="true" data-placeholder="Escribe aquí as materias con maiores dificultades...">
+                                    ${dificultadesTexto}
+                                </div>
+                                
+                                <!-- Sección 5: Acordos grupo (EDITABLE) -->
+                                <div class="section-title">5. ACORDOS TOMADOS EN RELACIÓN AO GRUPO</div>
+                                <div class="editable" contenteditable="true" data-placeholder="Escribe aquí os acordos tomados..."></div>
+                                
+                                <!-- Sección 6 -->
+                                <div class="section-title">6. ACORDOS TOMADOS RESPECTO DO ALUMNADO CON DIFICULTADES DE APRENDIZAXE</div>
+                                <div class="editable" contenteditable="true" data-placeholder="Especificar alumnado e medidas (Ref, Apo, ACS, Opt, IL, Flex)...">
+                                    <strong>MEDIDAS:</strong> Reforzo (Ref); Apoio (Apo); ACS; Cambio de optativa (Opt); Inmersión lingüística (IL); Flexibilización (Flex)<br><br>
+                                </div>
+                                
+                                <!-- Sección 7 -->
+                                <div class="section-title">7. ACORDOS TOMADOS RESPECTO DO ALUMNADO CON PROBLEMAS DE COMPORTAMENTO E ASISTENCIA</div>
+                                <div class="editable" contenteditable="true" data-placeholder="Especificar alumnado e medidas...">
+                                    <strong>MEDIDAS:</strong> Cambio de grupo; cambio de situación na aula; medidas de control; protocolo de absentismo; perda do dereito á avaliación continua; abandono materia<br><br>
+                                </div>
+                                
+                                <!-- Sección 8 -->
+                                <div class="section-title">8. SOLICITUDE DO EQUIPO DOCENTE PARA FALAR CO ALUMNADO</div>
+                                <div class="editable" contenteditable="true" data-placeholder="Alumnado co que se require entrevista individual..."></div>
+                                
+                                <!-- Sección 9 -->
+                                <div class="section-title">9. SOLICITUDE DO EQUIPO DOCENTE PARA FALAR COAS FAMILIAS</div>
+                                <div class="editable" contenteditable="true" data-placeholder="Familias coas que se require entrevista..."></div>
+                                
+                                <!-- Sección 10: Observacións (EDITABLE) -->
+                                <div class="section-title">10. OUTRAS OBSERVACIÓNS</div>
+                                <div class="editable" contenteditable="true" data-placeholder="Engade aquí outras observacións..."></div>
+                                
+                                <!-- Firma -->
+                                <div class="signature">
+                                    <p>Marín, a ${dataFormateada}</p>
+                                    <div class="signature-line">
+                                        <p>O/A Titor/a</p>
+                                        <p class="bold">Asdo.: ${titor}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Botón flotante só para gardar (non aparece en impresión) -->
+                        <div class="no-print">
+                            <button class="btn-save" onclick="gardarHTML()">💾 Gardar HTML</button>
+                        </div>
+                        
+
+                    </body>
+                    </html>`;
+                    
+                    // Abrir nunha nova ventá
+                    const ventana = window.open('', '_blank');
+                    ventana.document.write(htmlContent);
+                    ventana.document.close();
+                    
+                    exportarBtn.textContent = textoOrixinal;
+                    exportarBtn.disabled = false;
+                    
+                    alert('✅ Acta xerada! Abriuse unha nova ventá co documento.\n\n' +
+                          '✏️ Podes editar calquera sección facendo clic nas áreas amarelas.\n' +
+                          '🖨️ Para imprimir, usa Ctrl+P (non aparecerán cabeceiras do navegador).\n' +
+                          '💾 Garda como HTML usando o botón flotante.');
+                    
+                } catch (error) {
+                    console.error('Erro detallado:', error);
+                    const exportarBtn = document.getElementById('exportarActaBtn');
+                    exportarBtn.textContent = '📄 Xerar Acta';
+                    exportarBtn.disabled = false;
+                    alert('❌ Erro ao xerar o informe:\n\n' + error.message);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
