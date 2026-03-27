@@ -250,34 +250,47 @@
     <div class="container">
         <div class="header">
             <h1>📊 Analizador de Cualificacións - Xerador de Acta</h1>
-            <p>Selecciona o CSV de cualificacións para analizar e xerar a acta de avaliación</p>
+            <p>Analiza o informe "AL080-Listaxe cualificacións" e Xera a Acta de avaliación</p>
         </div>
-
+ 
         <div class="main-content">
+           <div id="mensaxeInicial">
+                <p>📁 Selecciona un ficheiro CSV do informe "AL080-Listaxe cualificacións" para comezar...</p>
+            </div>            
             <div class="file-input-area">
                 <input type="file" id="csvFileInput" accept=".csv">
-                <button class="btn btn-primary" id="analizarBtn" disabled>🔍 Analizar Ficheiro</button>
                 <button class="btn btn-success" id="exportarActaBtn" disabled>📄 Xerar Acta</button>
             </div>
 
-            <div class="row">
-                <div class="form-group">
-                    <label>📅 Data da Acta</label>
-                    <input type="date" id="dataActa" value="">
-                </div>
-                <div class="form-group">
-                    <label>👨‍🏫 Titor/a</label>
-                    <input type="text" id="titorActa" value="Óscar Núñez Aguado">
-                </div>
-                <div class="form-group">
-                    <label>📚 Curso Escolar</label>
-                    <input type="text" id="cursoActa" value="2025-26">
-                </div>
-                <div class="form-group">
-                    <label>👥 Grupo</label>
-                    <input type="text" id="grupoActa" value="DAM1">
-                </div>
-            </div>
+<div class="row">
+    <div class="form-group">
+        <label>📅 Data da Acta</label>
+        <input type="date" id="dataActa" value="">
+    </div>
+    <div class="form-group">
+        <label>👨‍🏫 Titor/a</label>
+        <input type="text" id="titorActa" value="Óscar Núñez Aguado">
+    </div>
+    <div class="form-group">
+        <label>📚 Curso Escolar</label>
+        <input type="text" id="cursoActa" value="2025-26">
+    </div>
+    <div class="form-group">
+        <label>👥 Grupo</label>
+        <input type="text" id="grupoActa" value="DAM1">
+    </div>
+</div>
+
+<!-- NOVO BLOQUE: Información extraída do CSV -->
+<div id="infoCSV" style="display: none; background: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #3498db;">
+    <h4 style="margin: 0 0 10px 0; color: #2c3e50;">📋 Datos extraídos do CSV</h4>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+        <div><strong>CURSO:</strong> <span id="infoCurso">—</span></div>
+        <div><strong>RÉXIME:</strong> <span id="infoRexime">—</span></div>
+        <div><strong>ANO ACADÉMICO:</strong> <span id="infoAnoAcademico">—</span></div>
+        <div><strong>Nº AVALIACIÓN:</strong> <span id="infoNumAvaliacion">—</span></div>
+    </div>
+</div>
 
             <div id="informesContainer" style="display: none;">
                 <div class="tab-container">
@@ -288,9 +301,6 @@
                     <div id="informeModulos" class="tab-content active"></div>
                     <div id="informeAlumnado" class="tab-content"></div>
                 </div>
-            </div>
-            <div id="mensaxeInicial">
-                <p>📁 Selecciona un ficheiro CSV para comezar a análise automática...</p>
             </div>
         </div>
     </div>
@@ -319,7 +329,6 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const csvFileInput = document.getElementById('csvFileInput');
-            const analizarBtn = document.getElementById('analizarBtn');
             const exportarActaBtn = document.getElementById('exportarActaBtn');
             const informesContainer = document.getElementById('informesContainer');
             const mensaxeInicial = document.getElementById('mensaxeInicial');
@@ -330,25 +339,14 @@
             csvFileInput.addEventListener('change', (event) => {
                 const file = event.target.files[0];
                 if (file) {
-                    analizarBtn.disabled = false;
                     // Analizar automaticamente
                     const reader = new FileReader();
                     reader.onload = (evento) => procesarContidoCSV(evento.target.result);
                     reader.onerror = () => mensaxeInicial.innerHTML = `<p style="color:red;"><b>Erro:</b> Non se puido ler o ficheiro.</p>`;
                     reader.readAsText(file, 'UTF-8');
-                } else {
-                    analizarBtn.disabled = true;
                 }
             });
 
-            analizarBtn.addEventListener('click', () => {
-                const file = csvFileInput.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (evento) => procesarContidoCSV(evento.target.result);
-                reader.onerror = () => mensaxeInicial.innerHTML = `<p style="color:red;"><b>Erro:</b> Non se puido ler o ficheiro.</p>`;
-                reader.readAsText(file, 'UTF-8');
-            });
 
             exportarActaBtn.addEventListener('click', xerarActaHTML);
 
@@ -390,18 +388,54 @@
                 const idxCualificacion = cabecera.indexOf('CUALIFICACIÓN');
                 const idxCurso = cabecera.indexOf('CURSO');
 
+
+// NOVAS COLUMNAS
+const idxRexime = cabecera.indexOf('RÉXIME');
+const idxAnoAcademico = cabecera.indexOf('ANO ACADÉMICO');
+const idxNumAvaliacion = cabecera.indexOf('Nº AVALIACIÓN');
+
+// Variable para gardar os datos da primeira fila válida
+let datosPrimeiraFila = null;
+
+
+
                 if ([idxDoi, idxNome, idxMateria, idxCualificacion, idxApelido1, idxApelido2, idxCurso].includes(-1)) {
                     mensaxeInicial.innerHTML = `<p style="color:red;"><b>Erro:</b> Faltan columnas esenciais no ficheiro CSV.</p>`;
                     return;
                 }
 
                 for (const linea of datos) {
-                    const campos = linea.split(';').map(c => c.replace(/^"|"$/g, '').trim());
-                    const doi = campos[idxDoi];
-                    const materia = campos[idxMateria];
-                    const cualificacionStr = campos[idxCualificacion];
+    const campos = linea.split(';').map(c => c.replace(/^"|"$/g, '').trim());
+    const doi = campos[idxDoi];
+    const materia = campos[idxMateria];
+    const cualificacionStr = campos[idxCualificacion];
 
-                    if (!doi || !materia) continue;
+    if (!doi || !materia) continue;
+
+    // Gardar datos da primeira fila válida
+    if (!datosPrimeiraFila) {
+        datosPrimeiraFila = {
+            curso: campos[idxCurso] || '',
+            rexime: (idxRexime !== -1) ? campos[idxRexime] || '' : '',
+            anoAcademico: (idxAnoAcademico !== -1) ? campos[idxAnoAcademico] || '' : '',
+            numAvaliacion: (idxNumAvaliacion !== -1) ? campos[idxNumAvaliacion] || '' : ''
+        };
+        
+        // Actualizar os campos do formulario cos datos extraídos
+        if (datosPrimeiraFila.anoAcademico) {
+            document.getElementById('cursoActa').value = datosPrimeiraFila.anoAcademico;
+        }
+        
+        // Calcular iniciais do curso para o grupo
+        if (datosPrimeiraFila.curso) {
+            const iniciaisCurso = datosPrimeiraFila.curso
+                .split(' ')
+                .map(palabra => palabra.charAt(0))
+                .join('')
+                .toUpperCase();
+            document.getElementById('grupoActa').value = iniciaisCurso;
+        }
+    }
 
                     if (!infoCiclo.curso) {
                         infoCiclo.curso = campos[idxCurso];
