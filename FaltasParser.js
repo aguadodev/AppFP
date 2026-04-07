@@ -1,6 +1,4 @@
-// FaltasParser.js
-// Módulo independiente para parsear el archivo de faltas desde texto plano
-
+// FaltasParser.js - Versión mejorada con extracción de centro y ciclo
 class FaltasParser {
     constructor() {
         this.reset();
@@ -12,6 +10,14 @@ class FaltasParser {
         this.alumnosDetalle = {};
         this.modulos = new Set();
         this.lines = [];
+        
+        // Metadatos del documento
+        this.metadata = {
+            centro: null,
+            ciclo: null,
+            fechaGeneracion: null,
+            totalPaginas: null
+        };
     }
 
     /**
@@ -28,16 +34,31 @@ class FaltasParser {
 
         this.lines = inputText.split('\n');
         
+        // Extraer metadatos primero
+        this._extractMetadata();
+        
         let currentStudent = '';
         let currentStudentFull = '';
+        let dentroDeDatos = false;
 
         for (let i = 0; i < this.lines.length; i++) {
             let line = this.lines[i].trimRight();
 
             if (line === '') continue;
 
-            // Saltar líneas de cabecera/metadatos
-            if (this._isHeaderLine(line)) {
+            // Detectar el inicio de los datos de faltas
+            if (line.includes('Apelidos e nome')) {
+                dentroDeDatos = true;
+                continue;
+            }
+
+            // Si aún no estamos en la zona de datos, saltar
+            if (!dentroDeDatos) {
+                continue;
+            }
+
+            // Detectar fin de los datos (línea de página o separador)
+            if (line.match(/Páxina \d+/) || line.match(/^\s*$/)) {
                 continue;
             }
 
@@ -62,6 +83,67 @@ class FaltasParser {
         }
 
         return this._getResult();
+    }
+
+    /**
+     * Extrae metadatos del documento (centro, ciclo, fecha)
+     * @private
+     */
+    _extractMetadata() {
+        let dentroDeCabecera = true;
+        let encontradoGraos = false;
+        
+        for (let i = 0; i < this.lines.length && dentroDeCabecera; i++) {
+            const line = this.lines[i].trim();
+            
+            // Buscar el nombre del centro (primera línea no vacía)
+            if (!this.metadata.centro && line.length > 0 && !line.match(/^\d/)) {
+                // Evitar capturar líneas que no son el centro
+                if (!line.includes('Graos') && !line.includes('Apelidos') && 
+                    !line.includes('Data') && line.length < 100) {
+                    this.metadata.centro = line;
+                }
+            }
+            
+            // Buscar "Graos D: Ciclos formativos"
+            if (line.includes('Graos D:') && line.includes('Ciclos formativos')) {
+                encontradoGraos = true;
+                // La siguiente línea contiene el ciclo
+                if (i + 1 < this.lines.length) {
+                    const cicloLine = this.lines[i + 1].trim();
+                    if (cicloLine && !cicloLine.includes('Dende:')) {
+                        this.metadata.ciclo = cicloLine;
+                    }
+                }
+            }
+            
+            // Buscar fecha del informe (formato: "Data DD/MM/YYYY HH:MM")
+            const fechaMatch = line.match(/Data (\d{2}\/\d{2}\/\d{4})/);
+            if (fechaMatch) {
+                this.metadata.fechaGeneracion = this._parseDate(fechaMatch[1]);
+            }
+            
+            // Buscar número de página
+            const paginaMatch = line.match(/Páxina (\d+)/);
+            if (paginaMatch) {
+                const pagina = parseInt(paginaMatch[1]);
+                if (!this.metadata.totalPaginas || pagina > this.metadata.totalPaginas) {
+                    this.metadata.totalPaginas = pagina;
+                }
+            }
+            
+            // Terminar cuando encontramos "Apelidos e nome"
+            if (line.includes('Apelidos e nome')) {
+                dentroDeCabecera = false;
+            }
+        }
+        
+        // Limpiar el centro si tiene formato HTML o caracteres extraños
+        if (this.metadata.centro) {
+            this.metadata.centro = this.metadata.centro
+                .replace(/<[^>]*>/g, '')
+                .trim();
+        }
     }
 
     /**
@@ -92,6 +174,13 @@ class FaltasParser {
             this.alumnosDetalle[fullName] = {
                 apellidos,
                 nombre,
+                fullName
+            };
+        } else {
+            // Fallback si no hay coma
+            this.alumnosDetalle[fullName] = {
+                apellidos: fullName,
+                nombre: '',
                 fullName
             };
         }
@@ -200,14 +289,16 @@ class FaltasParser {
             return false;
         }
 
-        // Buscar en la siguiente línea
-        const nextLineIndexCheck = nextLineIndex + 1;
-        if (nextLineIndexCheck < this.lines.length) {
-            const nextLine = this.lines[nextLineIndexCheck].trim();
-            if (nextLine.includes('Si')) {
-                return true;
-            } else if (nextLine.includes('Non')) {
-                return false;
+        // Buscar en la siguiente línea (hasta 2 líneas siguientes)
+        for (let offset = 1; offset <= 2; offset++) {
+            const nextLineIndexCheck = nextLineIndex + offset;
+            if (nextLineIndexCheck < this.lines.length) {
+                const nextLine = this.lines[nextLineIndexCheck].trim();
+                if (nextLine.includes('Si')) {
+                    return true;
+                } else if (nextLine.includes('Non')) {
+                    return false;
+                }
             }
         }
 
@@ -219,11 +310,20 @@ class FaltasParser {
      * @private
      */
     _extractAndAddFalta(student, fecha, fechaObj, tipoFalta, parenContent, justificada) {
-        const parts = parenContent.split(',');
+        // Limpiar el contenido del paréntesis
+        let cleanContent = parenContent.trim();
+        
+        // Eliminar "SI" o "NON" si están al final
+        cleanContent = cleanContent.replace(/\s+(SI|NON)$/i, '');
+        
+        const parts = cleanContent.split(',');
         if (parts.length >= 2) {
             let hora = parts[0].trim();
             let modulo = parts.slice(1).join(',').trim();
             modulo = modulo.replace(/\s+/g, ' ').trim();
+            
+            // Limpiar módulo de posibles caracteres extraños
+            modulo = modulo.replace(/[()]/g, '').trim();
 
             // Solo guardar si es ASISTENCIA y NO JUSTIFICADA
             if (tipoFalta === 'Asistencia' && !justificada) {
@@ -250,11 +350,27 @@ class FaltasParser {
      * @private
      */
     _parseDate(dateStr) {
+        if (!dateStr) return null;
         const parts = dateStr.split('/');
         if (parts.length === 3) {
-            return new Date(parts[2], parts[1] - 1, parts[0]);
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            const year = parseInt(parts[2], 10);
+            return new Date(year, month, day);
         }
         return null;
+    }
+
+    /**
+     * Formatea una fecha para mostrar
+     * @private
+     */
+    _formatDate(date) {
+        if (!date) return null;
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
     }
 
     /**
@@ -262,7 +378,19 @@ class FaltasParser {
      * @private
      */
     _getResult() {
+        const self = this;
+        
         return {
+            // Metadatos del documento
+            metadata: {
+                centro: this.metadata.centro,
+                ciclo: this.metadata.ciclo,
+                fechaGeneracion: this.metadata.fechaGeneracion,
+                fechaGeneracionStr: this.metadata.fechaGeneracion ? 
+                    this._formatDate(this.metadata.fechaGeneracion) : null,
+                totalPaginas: this.metadata.totalPaginas
+            },
+            
             // Datos principales
             faltasData: this.faltasData,
             alumnos: Array.from(this.alumnos),
@@ -271,38 +399,68 @@ class FaltasParser {
             
             // Métodos auxiliares
             getFaltasPorAlumno: (alumno) => {
-                return this.faltasData.filter(f => f.alumno === alumno);
+                return self.faltasData.filter(f => f.alumno === alumno);
             },
             
             getFaltasPorModulo: (modulo) => {
-                return this.faltasData.filter(f => f.modulo === modulo);
+                return self.faltasData.filter(f => f.modulo === modulo);
             },
             
             getFaltasPorAlumnoYModulo: (alumno, modulo) => {
-                return this.faltasData.filter(f => f.alumno === alumno && f.modulo === modulo);
+                return self.faltasData.filter(f => f.alumno === alumno && f.modulo === modulo);
             },
             
-            getTotalFaltas: () => this.faltasData.length,
-            getTotalAlumnos: () => this.alumnos.size,
-            getTotalModulos: () => this.modulos.size,
+            getFaltasEnRango: (fechaInicio, fechaFin) => {
+                return self.faltasData.filter(f => {
+                    if (!f.fechaObj) return false;
+                    return f.fechaObj >= fechaInicio && f.fechaObj <= fechaFin;
+                });
+            },
+            
+            getTotalFaltas: () => self.faltasData.length,
+            getTotalAlumnos: () => self.alumnos.size,
+            getTotalModulos: () => self.modulos.size,
             
             // Matriz resumen
             buildResumenMatriz: (modulosList = null) => {
-                const modulosArray = modulosList || Array.from(this.modulos).sort();
+                const modulosArray = modulosList || Array.from(self.modulos).sort();
                 const matrizResumen = {};
                 
-                this.alumnos.forEach(alumno => {
+                self.alumnos.forEach(alumno => {
                     matrizResumen[alumno] = {};
                     modulosArray.forEach(m => matrizResumen[alumno][m] = 0);
                 });
                 
-                this.faltasData.forEach(falta => {
+                self.faltasData.forEach(falta => {
                     if (matrizResumen[falta.alumno] && falta.modulo) {
                         matrizResumen[falta.alumno][falta.modulo]++;
                     }
                 });
                 
                 return matrizResumen;
+            },
+            
+            // Exportar a JSON
+            toJSON: () => {
+                return {
+                    metadata: {
+                        centro: self.metadata.centro,
+                        ciclo: self.metadata.ciclo,
+                        fechaGeneracion: self.metadata.fechaGeneracionStr,
+                        totalPaginas: self.metadata.totalPaginas
+                    },
+                    faltasData: self.faltasData.map(f => ({
+                        alumno: f.alumno,
+                        fecha: f.fecha,
+                        hora: f.hora,
+                        modulo: f.modulo
+                    })),
+                    stats: {
+                        totalFaltas: self.faltasData.length,
+                        totalAlumnos: self.alumnos.size,
+                        totalModulos: self.modulos.size
+                    }
+                };
             },
             
             // Estadísticas
@@ -315,12 +473,12 @@ class FaltasParser {
     }
 }
 
-// Exportar para uso en el navegador (global)
+// Exportar para uso en el navegador
 if (typeof window !== 'undefined') {
     window.FaltasParser = FaltasParser;
 }
 
-// Exportar para uso con módulos ES6 (si es necesario)
+// Exportar para uso con módulos ES6
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = FaltasParser;
 }
