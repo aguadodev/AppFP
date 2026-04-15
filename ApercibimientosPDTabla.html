@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Tabla de Apercibimientos por Alumno y Materia</title>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/fixedheader/3.4.0/css/fixedHeader.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .file-input { margin-bottom: 20px; }
+        .error { color: #dc3545; padding: 10px; background: #f8d7da; border-radius: 4px; display: none; margin-bottom: 20px; }
+        .contenido { display: none; }
+        
+        /* Estilos para las celdas */
+        .celda-apercibimiento {
+            background-color: #ffe4b5 !important; /* Naranja claro */
+            color: #333;
+        }
+        
+        .celda-comunicacionpd {
+            background-color: #000000 !important; /* Negro */
+            color: #ffffff !important;
+        }
+        
+        /* Mantener el hover de DataTables pero respetando el color base */
+        .celda-apercibimiento:hover {
+            background-color: #ffd700 !important;
+        }
+        
+        .celda-comunicacionpd:hover {
+            background-color: #333333 !important;
+        }
+        
+        /* Estilo para tabla */
+        #tablaAlumnos {
+            font-size: 13px;
+        }
+        
+        #tablaAlumnos th {
+            background-color: #4CAF50;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            vertical-align: middle;
+        }
+        
+        #tablaAlumnos td {
+            text-align: center;
+            vertical-align: middle;
+        }
+        
+        #tablaAlumnos td:first-child {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            text-align: left;
+            position: sticky;
+            left: 0;
+            z-index: 1;
+        }
+        
+        /* Leyenda */
+        .leyenda {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f9f9f9;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .color-muestra {
+            display: inline-block;
+            width: 30px;
+            height: 20px;
+            margin-right: 8px;
+            vertical-align: middle;
+            border: 1px solid #ccc;
+        }
+        
+        .info-adicional {
+            margin-top: 10px;
+            padding: 10px;
+            background: #e3f2fd;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .toolbar {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .toolbar button {
+            padding: 5px 10px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+        }
+        
+        .toolbar button:hover {
+            background: #0056b3;
+        }
+        
+        .stats {
+            margin-left: auto;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .alumno-destacado {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tabla de Apercibimientos por Alumno y Materia</h1>
+    <p>Vista pivote: filas = alumnos (con nombre y apellidos completos), columnas = materias</p>
+
+    <div class="file-input">
+        <input type="file" id="csvFile" accept=".csv">
+    </div>
+
+    <div id="error" class="error"></div>
+
+    <div class="contenido" id="contenido">
+        <div class="toolbar">
+            <button id="exportarExcel">📥 Exportar a CSV</button>
+            <button id="mostrarStats">📊 Mostrar estadísticas</button>
+            <span id="stats" class="stats"></span>
+        </div>
+        
+        <div style="overflow-x: auto;">
+            <table id="tablaAlumnos" class="display" style="width:100%">
+                <thead id="tablaHeader"></thead>
+                <tbody id="tablaBody"></tbody>
+            </table>
+        </div>
+        
+        <div class="leyenda">
+            <div><span class="color-muestra" style="background-color: #ffe4b5;"></span> Apercibimiento (naranja claro)</div>
+            <div><span class="color-muestra" style="background-color: #000000;"></span> ComunicaciónPD (negro con texto blanco)</div>
+            <div><span class="color-muestra" style="background-color: #ffffff; border: 1px solid #ccc;"></span> Sin incidencia</div>
+        </div>
+        
+        <div class="info-adicional" id="infoAdicional">
+            <strong>Identificación de alumnos:</strong> Se utiliza el nombre completo (Apellido1 + Apellido2 + Nombre) para identificar de forma única a cada alumno.
+        </div>
+    </div>
+
+    <script>
+        let dataTable = null;
+        let datosPivote = null;
+        let materiasList = [];
+        let alumnosList = [];
+
+        document.getElementById('csvFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const contenido = evt.target.result;
+                procesarCSV(contenido);
+            };
+            reader.onerror = function() {
+                mostrarError('Error al leer el archivo');
+            };
+            reader.readAsText(file, 'UTF-8');
+        });
+
+        function procesarCSV(csvText) {
+            try {
+                const lineas = csvText.split('\n').filter(linea => linea.trim());
+                if (lineas.length === 0) throw new Error('Archivo vacío');
+
+                const cabeceras = lineas[0].split(',').map(c => c.replace(/["']/g, '').trim());
+                
+                // Índices de columnas necesarias
+                const idxNombre = cabeceras.findIndex(c => c === 'NOME');
+                const idxApellido1 = cabeceras.findIndex(c => c === '1º APELIDO');
+                const idxApellido2 = cabeceras.findIndex(c => c === '2º APELIDO');
+                const idxMateria = cabeceras.findIndex(c => c === 'MATERIA');
+                const idxTipoInforme = cabeceras.findIndex(c => c === 'TIPO INFORME');
+                
+                if (idxNombre === -1 || idxMateria === -1 || idxTipoInforme === -1) {
+                    throw new Error('Faltan columnas requeridas: NOME, MATERIA, TIPO INFORME');
+                }
+                
+                // Procesar datos
+                const registros = [];
+                let alumnosConFaltantes = 0;
+                
+                for (let i = 1; i < lineas.length; i++) {
+                    const valores = [];
+                    let campo = '';
+                    let entreComillas = false;
+                    
+                    for (let j = 0; j < lineas[i].length; j++) {
+                        const char = lineas[i][j];
+                        if (char === '"') {
+                            entreComillas = !entreComillas;
+                        } else if (char === ',' && !entreComillas) {
+                            valores.push(campo.trim());
+                            campo = '';
+                        } else {
+                            campo += char;
+                        }
+                    }
+                    valores.push(campo.trim());
+                    
+                    if (valores.length >= cabeceras.length) {
+                        const nombre = (valores[idxNombre] || '').trim();
+                        const apellido1 = (idxApellido1 !== -1 ? (valores[idxApellido1] || '') : '').trim();
+                        const apellido2 = (idxApellido2 !== -1 ? (valores[idxApellido2] || '') : '').trim();
+                        
+                        // Construir nombre completo: APELLIDO1 APELLIDO2 NOME
+                        let nombreCompleto = '';
+                        if (apellido1) nombreCompleto += apellido1;
+                        if (apellido2) nombreCompleto += (nombreCompleto ? ' ' : '') + apellido2;
+                        if (nombre) nombreCompleto += (nombreCompleto ? ' ' : '') + nombre;
+                        
+                        // Si no hay apellidos, usar solo el nombre
+                        if (!nombreCompleto) nombreCompleto = nombre;
+                        
+                        const materia = (valores[idxMateria] || '').trim();
+                        let tipoInforme = (valores[idxTipoInforme] || '').trim();
+                        
+                        // Normalizar tipo de informe
+                        tipoInforme = tipoInforme.toLowerCase();
+                        let tipo = '';
+                        if (tipoInforme.includes('apercibimiento') || tipoInforme.includes('apercibimento')) {
+                            tipo = 'Apercibimiento';
+                        } else if (tipoInforme.includes('comunicaciónpd') || tipoInforme.includes('comunicacionpd') || 
+                                   tipoInforme.includes('comunicación pd') || tipoInforme.includes('comunicacion pd')) {
+                            tipo = 'ComunicaciónPD';
+                        } else if (tipoInforme.includes('comunicación') || tipoInforme.includes('comunicacion')) {
+                            tipo = 'Comunicación';
+                        }
+                        
+                        if (nombreCompleto && materia && tipo) {
+                            registros.push({
+                                alumno: nombreCompleto,
+                                materia: materia,
+                                tipo: tipo,
+                                apellido1: apellido1,
+                                apellido2: apellido2,
+                                nombre: nombre
+                            });
+                        } else if (nombreCompleto && materia) {
+                            // Registro sin tipo válido
+                            console.log('Registro ignorado por tipo inválido:', tipoInforme);
+                        }
+                    }
+                }
+                
+                if (registros.length === 0) throw new Error('No se encontraron registros válidos');
+                
+                // Mostrar ejemplo de cómo se identifican los alumnos
+                const alumnosUnicos = new Map();
+                registros.forEach(reg => {
+                    if (!alumnosUnicos.has(reg.alumno)) {
+                        alumnosUnicos.set(reg.alumno, {
+                            apellido1: reg.apellido1,
+                            apellido2: reg.apellido2,
+                            nombre: reg.nombre
+                        });
+                    }
+                });
+                
+                console.log('Ejemplo de identificación de alumnos (primeros 5):');
+                let count = 0;
+                for (let [alumno, datos] of alumnosUnicos.entries()) {
+                    if (count++ < 5) {
+                        console.log(`- ${alumno} (Ap1: ${datos.apellido1}, Ap2: ${datos.apellido2}, Nom: ${datos.nombre})`);
+                    }
+                }
+                
+                // Obtener lista única de alumnos y materias
+                const alumnosSet = new Set();
+                const materiasSet = new Set();
+                
+                registros.forEach(reg => {
+                    alumnosSet.add(reg.alumno);
+                    materiasSet.add(reg.materia);
+                });
+                
+                alumnosList = Array.from(alumnosSet).sort((a, b) => {
+                    // Ordenar alfabéticamente por apellidos y nombre
+                    return a.localeCompare(b, 'es');
+                });
+                materiasList = Array.from(materiasSet).sort((a, b) => {
+                    return a.localeCompare(b, 'es');
+                });
+                
+                // Crear matriz pivote
+                const pivote = {};
+                alumnosList.forEach(alumno => {
+                    pivote[alumno] = {};
+                    materiasList.forEach(materia => {
+                        pivote[alumno][materia] = null;
+                    });
+                });
+                
+                // Llenar matriz con prioridad: ComunicaciónPD > Apercibimiento > Comunicación
+                registros.forEach(reg => {
+                    const valorActual = pivote[reg.alumno][reg.materia];
+                    const prioridad = (tipo) => {
+                        if (tipo === 'ComunicaciónPD') return 3;
+                        if (tipo === 'Apercibimiento') return 2;
+                        if (tipo === 'Comunicación') return 1;
+                        return 0;
+                    };
+                    
+                    if (!valorActual || prioridad(reg.tipo) > prioridad(valorActual)) {
+                        pivote[reg.alumno][reg.materia] = reg.tipo;
+                    }
+                });
+                
+                datosPivote = pivote;
+                mostrarTablaPivote();
+                ocultarError();
+                
+                // Mostrar estadísticas
+                mostrarEstadisticas();
+                
+                // Actualizar información adicional
+                const infoAdicional = document.getElementById('infoAdicional');
+                infoAdicional.innerHTML = `<strong>Identificación de alumnos:</strong> Se utiliza el nombre completo (Apellido1 + Apellido2 + Nombre) para identificar de forma única a cada alumno.<br>
+                                           <strong>Total alumnos identificados:</strong> ${alumnosList.length} |
+                                           <strong>Total materias:</strong> ${materiasList.length} |
+                                           <strong>Total registros procesados:</strong> ${registros.length}`;
+                
+            } catch(err) {
+                mostrarError('Error al procesar CSV: ' + err.message);
+            }
+        }
+        
+        function obtenerClaseCelda(tipo) {
+            if (tipo === 'Apercibimiento') return 'celda-apercibimiento';
+            if (tipo === 'ComunicaciónPD') return 'celda-comunicacionpd';
+            return '';
+        }
+        
+        function obtenerTextoMostrar(tipo) {
+            if (tipo === 'Apercibimiento') return 'A';
+            if (tipo === 'ComunicaciónPD') return 'C-PD';
+            if (tipo === 'Comunicación') return 'C';
+            return '';
+        }
+        
+        function obtenerTitulo(tipo) {
+            if (tipo === 'Apercibimiento') return 'Apercibimiento';
+            if (tipo === 'ComunicaciónPD') return 'Comunicación PD';
+            if (tipo === 'Comunicación') return 'Comunicación';
+            return 'Sin incidencia';
+        }
+        
+        function mostrarTablaPivote() {
+            if (dataTable) {
+                dataTable.destroy();
+            }
+            
+            const thead = document.getElementById('tablaHeader');
+            const tbody = document.getElementById('tablaBody');
+            
+            // Construir cabecera
+            let headerHtml = '<tr><th>Alumno (Apellidos y Nombre)</th>';
+            materiasList.forEach(materia => {
+                headerHtml += `<th>${materia}</th>`;
+            });
+            headerHtml += '<th>Total Incidencias</th></tr>';
+            thead.innerHTML = headerHtml;
+            
+            // Construir cuerpo
+            let bodyHtml = '';
+            alumnosList.forEach(alumno => {
+                let totalIncidencias = 0;
+                let celdasHtml = '';
+                
+                materiasList.forEach(materia => {
+                    const tipo = datosPivote[alumno][materia];
+                    const clase = obtenerClaseCelda(tipo);
+                    const texto = obtenerTextoMostrar(tipo);
+                    const titulo = obtenerTitulo(tipo);
+                    if (tipo) totalIncidencias++;
+                    celdasHtml += `<td class="${clase}" title="${titulo}">${texto || '—'}</td>`;
+                });
+                
+                bodyHtml += `<tr>
+                    <td style="text-align: left; font-weight: bold;" class="alumno-destacado">${alumno}</td>
+                    ${celdasHtml}
+                    <td style="background-color: #f0f0f0; font-weight: bold;">${totalIncidencias}</td>
+                </tr>`;
+            });
+            tbody.innerHTML = bodyHtml;
+            
+            // Inicializar DataTable
+            dataTable = $('#tablaAlumnos').DataTable({
+                language: {
+                    "sProcessing": "Procesando...",
+                    "sLengthMenu": "Mostrar _MENU_ registros",
+                    "sZeroRecords": "No se encontraron resultados",
+                    "sEmptyTable": "Ningún dato disponible",
+                    "sInfo": "Mostrando _START_ a _END_ de _TOTAL_ alumnos",
+                    "sInfoEmpty": "Mostrando 0 a 0 de 0 alumnos",
+                    "sInfoFiltered": "(filtrado de _MAX_ alumnos totales)",
+                    "sSearch": "Buscar alumno (por apellidos o nombre):",
+                    "oPaginate": {
+                        "sFirst": "Primero",
+                        "sLast": "Último",
+                        "sNext": "Siguiente",
+                        "sPrevious": "Anterior"
+                    }
+                },
+                pageLength: 25,
+                order: [[0, 'asc']],
+                scrollX: true,
+                fixedHeader: {
+                    header: true
+                },
+                columnDefs: [
+                    {
+                        targets: [0],
+                        width: '250px'
+                    }
+                ]
+            });
+            
+            document.getElementById('contenido').style.display = 'block';
+        }
+        
+        function mostrarEstadisticas() {
+            if (!datosPivote) return;
+            
+            let totalApercibimientos = 0;
+            let totalComunicacionesPD = 0;
+            let totalComunicaciones = 0;
+            
+            alumnosList.forEach(alumno => {
+                materiasList.forEach(materia => {
+                    const tipo = datosPivote[alumno][materia];
+                    if (tipo === 'Apercibimiento') totalApercibimientos++;
+                    else if (tipo === 'ComunicaciónPD') totalComunicacionesPD++;
+                    else if (tipo === 'Comunicación') totalComunicaciones++;
+                });
+            });
+            
+            const statsHtml = `📊 Apercibimientos:${totalApercibimientos} | ComunicacionesPD:${totalComunicacionesPD} | Comunicaciones:${totalComunicaciones} | Total:${totalApercibimientos + totalComunicacionesPD + totalComunicaciones}`;
+            document.getElementById('stats').innerHTML = statsHtml;
+        }
+        
+        document.getElementById('exportarExcel').addEventListener('click', function() {
+            if (!datosPivote || !materiasList.length) return;
+            
+            // Crear contenido CSV
+            let csvContent = '\uFEFFAlumno (Apellidos y Nombre),' + materiasList.join(',') + ',Total Incidencias\n';
+            
+            alumnosList.forEach(alumno => {
+                let totalIncidencias = 0;
+                const fila = [alumno];
+                
+                materiasList.forEach(materia => {
+                    const tipo = datosPivote[alumno][materia];
+                    const texto = obtenerTextoMostrar(tipo);
+                    if (tipo) totalIncidencias++;
+                    let valorMostrar = '';
+                    if (texto === 'A') valorMostrar = 'Apercibimiento';
+                    else if (texto === 'C-PD') valorMostrar = 'Comunicación PD';
+                    else if (texto === 'C') valorMostrar = 'Comunicación';
+                    else valorMostrar = '';
+                    fila.push(valorMostrar);
+                });
+                fila.push(totalIncidencias);
+                
+                csvContent += fila.map(valor => {
+                    if (typeof valor === 'string' && (valor.includes(',') || valor.includes('"'))) {
+                        return '"' + valor.replace(/"/g, '""') + '"';
+                    }
+                    return valor;
+                }).join(',') + '\n';
+            });
+            
+            // Descargar archivo
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.setAttribute('download', 'tabla_alumnos_apellidos_materias.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            alert('Archivo exportado exitosamente');
+        });
+        
+        document.getElementById('mostrarStats').addEventListener('click', function() {
+            mostrarEstadisticas();
+            alert('Estadísticas actualizadas en la parte superior derecha');
+        });
+        
+        function mostrarError(msg) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = msg;
+            errorDiv.style.display = 'block';
+            document.getElementById('contenido').style.display = 'none';
+        }
+        
+        function ocultarError() {
+            document.getElementById('error').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

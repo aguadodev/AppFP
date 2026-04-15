@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Apercibimientos</title>
+
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <script src="datatables/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial;
+            margin: 20px;
+        }
+
+        .toolbar {
+            margin: 10px 0;
+        }
+
+        button {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Apercibimientos</h2>
+
+    <input type="file" id="fileInput">
+
+    <div class="toolbar">
+        <button id="exportCSV">Exportar CSV</button>
+        <button id="exportJS">Guardar como JS</button>
+    </div>
+
+    <table id="tabla" class="display" style="width:100%">
+        <thead></thead>
+    </table>
+
+    <script>
+        let dataTable;
+        let datosActuales = [];
+        let cabeceras = [];
+
+    
+        /* =========================
+           FECHAS
+        ========================= */        
+        // Función para parsear fecha en formato dd/mm/aaaa a Date
+        function parseFecha(fechaStr) {
+            if (!fechaStr || fechaStr.trim() === '') return null;
+            
+            // Intentar parsear dd/mm/yyyy
+            const partes = fechaStr.split('/');
+            if (partes.length === 3) {
+                const dia = parseInt(partes[0], 10);
+                const mes = parseInt(partes[1], 10) - 1;
+                const año = parseInt(partes[2], 10);
+                const fecha = new Date(año, mes, dia);
+                if (!isNaN(fecha.getTime()) && fecha.getFullYear() === año && fecha.getMonth() === mes && fecha.getDate() === dia) {
+                    return fecha;
+                }
+            }
+            
+            // Intentar con formato ISO o americano
+            const fecha = new Date(fechaStr);
+            return isNaN(fecha.getTime()) ? null : fecha;
+        }
+        
+        // Formatear fecha a dd/mm/aaaa
+        function formatearFecha(fecha) {
+            if (!fecha) return '';
+            if (typeof fecha === 'string') {
+                const parsed = parseFecha(fecha);
+                if (parsed) {
+                    const dia = parsed.getDate().toString().padStart(2, '0');
+                    const mes = (parsed.getMonth() + 1).toString().padStart(2, '0');
+                    const año = parsed.getFullYear();
+                    return `${dia}/${mes}/${año}`;
+                }
+                return fecha;
+            }
+            if (fecha instanceof Date) {
+                const dia = fecha.getDate().toString().padStart(2, '0');
+                const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+                const año = fecha.getFullYear();
+                return `${dia}/${mes}/${año}`;
+            }
+            return '';
+        }
+
+        /* =========================
+           CARGA ARCHIVO
+        ========================= */
+        document.getElementById('fileInput').addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+
+            reader.onload = e => {
+                const text = e.target.result;
+
+                if (file.name.endsWith('.js')) {
+                    cargarDesdeJS(text);
+                } else {
+                    cargarCSV(text);
+                }
+            };
+
+            reader.readAsText(file);
+        });
+
+        /* =========================
+           CSV
+        ========================= */
+        function limpiarValor(valor) {
+            if (!valor) return '';
+
+            return valor
+                .replace(/\r/g, '')     // quitar retornos de carro
+                .replace(/\n/g, '')     // quitar saltos de línea
+                .trim();                // quitar espacios inicio/fin
+        }
+
+        function cargarCSV(text) {
+            const lineas = text.split('\n').filter(l => l.trim());
+            cabeceras = lineas[0].split(',').map(x => x.trim());
+
+            datosActuales = lineas.slice(1).map(l => {
+                const vals = l.split(',');
+                let obj = {};
+                cabeceras.forEach((c, i) => obj[c] = limpiarValor(vals[i] || ''));
+                return obj;
+            });
+
+            crearTabla();
+        }
+
+        /* =========================
+           JS (JSON)
+        ========================= */
+        function cargarDesdeJS(text) {
+            try {
+                const json = text.match(/\[.*\]/s)[0];
+                datosActuales = JSON.parse(json).map(fila => {
+                    let limpia = {};
+                    Object.keys(fila).forEach(k => {
+                        limpia[k] = limpiarValor(fila[k]);
+                    });
+                    return limpia;
+                }); cabeceras = Object.keys(datosActuales[0] || {});
+                crearTabla();
+            } catch {
+                alert("Error leyendo JS");
+            }
+        }
+
+        /* =========================
+           TABLA
+        ========================= */
+        function crearTabla() {
+
+            if (dataTable) dataTable.destroy();
+            $('#tabla thead').empty();
+
+            // Cabecera
+            const tr = $('<tr>');
+            cabeceras.forEach(c => tr.append(`<th>${c}</th>`));
+            $('#tabla thead').append(tr);
+
+            // Tipo fecha
+        /*    $.fn.dataTable.ext.type.order['fecha-euro-pre'] = d => {
+                const f = parseFecha(d);
+                return f ? f.getTime() : 0;
+            };*/
+
+            const columns = cabeceras.map(c => {
+
+                if (c === 'DATA INFORME' || c === 'DATA ACUSE') {
+                    return {
+                        data: c,
+                        render: function (data, type) {
+
+                            const fecha = parseFecha(data);
+
+                            // 👉 ORDENACIÓN (clave)
+                            if (type === 'sort' || type === 'type') {
+                                return fecha ? fecha.getTime() : 0;
+                            }
+
+                            // 👉 VISUALIZACIÓN
+                            let valor = formatearFecha(data);
+
+                            // Solo DATA ACUSE es editable
+                            if (c === 'DATA ACUSE' && type === 'display') {
+                                return `
+                    <span>${valor}</span>
+                    <button class="edit">✏️</button>
+                `;
+                            }
+
+                            return valor;
+                        }
+                    };
+                }
+
+                return { data: c };
+            });
+
+            dataTable = $('#tabla').DataTable({
+                data: datosActuales,
+                columns: columns,
+                pageLength: 20
+            });
+
+            editarCeldas();
+        }
+
+        /* =========================
+           EDICIÓN
+        ========================= */
+        function editarCeldas() {
+    $('#tabla tbody').on('click', '.edit', function () {
+
+        const td = $(this).closest('td');
+        const cell = dataTable.cell(td);
+        const rowIndex = dataTable.row(td.closest('tr')).index();
+
+        const input = $('<input>').val(cell.data()).css('width','100%');
+
+        td.html(input);
+        input.focus();
+
+        input.on('blur keypress', function(e){
+            if (e.type==='blur' || e.which===13) {
+
+                let val = input.val();
+
+                if (val) {
+                    const f = parseFecha(val);
+                    if (!f) {
+                        alert("Fecha inválida");
+                        return;
+                    }
+                    val = formatearFecha(f);
+                }
+
+                cell.data(val).draw(false);
+                datosActuales[rowIndex]['DATA ACUSE'] = val;
+            }
+        });
+    });
+}
+
+        /* =========================
+           EXPORTAR CSV
+        ========================= */
+        document.getElementById('exportCSV').onclick = () => {
+            let csv = cabeceras.join(',') + '\n';
+
+            datosActuales.forEach(r => {
+                csv += cabeceras.map(c => r[c] || '').join(',') + '\n';
+            });
+
+            descargar(csv, 'apercibimientos.csv');
+        };
+
+        /* =========================
+           EXPORTAR JS
+        ========================= */
+        document.getElementById('exportJS').onclick = () => {
+
+            const contenido =
+                `const APERCIBIMIENTOS = ${JSON.stringify(datosActuales, null, 2)};`;
+
+            descargar(contenido, 'apercibimientos.js');
+        };
+
+        /* =========================
+           DESCARGA
+        ========================= */
+        function descargar(texto, nombre) {
+            const blob = new Blob([texto], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = nombre;
+            a.click();
+        }
+    </script>
+
+</body>
+
+</html>

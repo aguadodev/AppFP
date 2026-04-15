@@ -11,9 +11,6 @@
     <script type="text/javascript" src="datatables/jquery-3.7.1.min.js"></script>
     <script type="text/javascript" src="datatables/datatables.min.js"></script>
 
-
-    <script type="text/javascript" src="FaltasParser.js"></script>
-
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -238,14 +235,6 @@
             display: block;
         }
 
-        .encoding-info {
-            background-color: #fff3cd;
-            padding: 5px 10px;
-            border-radius: 4px;
-            margin-bottom: 10px;
-            font-size: 0.9em;
-        }
-
         .auto-load-info {
             background-color: #cce5ff;
             border: 1px solid #b8daff;
@@ -396,9 +385,6 @@
             <div class="file-input">
                 <label><strong>Archivo de módulos (opcional - para actualizar los precargados):</strong></label><br>
                 <input type="file" id="modulosFileInput" accept=".csv" onchange="loadModulosFile(event)">
-                <div id="modulosInfo" class="info-modulos">
-                    Módulos cargados: <span id="modulosCargados">19</span> (precargados por defecto)
-                </div>
             </div>
 
             <div class="file-input">
@@ -420,6 +406,8 @@
             <button onclick="processInput()" id="processBtn">Procesar</button>
             <button onclick="clearAll()">Limpiar</button>
             <button onclick="resetToDefaultModules()" style="background-color: #28a745;">↺ Restaurar módulos por defecto</button>
+            <button class="print-button" onclick="generarInformeImpresion()" id="printBtn" disabled>🖨️ Generar Informe
+                para Imprimir</button>            
         </div>
 
         <div id="error" class="error" style="display: none;"></div>
@@ -433,8 +421,7 @@
                 <span id="totalAlumnos">0</span> alumnos ·
                 <span id="totalModulos">0</span> módulos
             </div>
-            <button class="print-button" onclick="generarInformeImpresion()" id="printBtn" disabled>🖨️ Generar Informe
-                para Imprimir</button>
+
         </div>
 
         <div class="tabs">
@@ -447,15 +434,6 @@
 
         <div id="modulosTab" class="tab-content active">
             <h3>Módulos y Umbrales</h3>
-            <div class="encoding-info">
-                ✅ Los nombres de módulos se muestran correctamente (codificación UTF-8)
-            </div>
-            <div class="info-modulos">
-                <p><strong>Cálculo de sesiones:</strong> Cada sesión = 50 minutos · Horas totales × 60 ÷ 50 = sesiones
-                    (con 1 decimal)</p>
-                <p><strong>Umbral Comunicación PD (4%):</strong> floor(sesiones × 0.04) + 1</p>
-                <p><strong>Umbral Apercibimiento PD (6%):</strong> floor(sesiones × 0.06) + 1</p>
-            </div>
             <div class="table-container">
                 <table id="modulosTable" class="display">
                     <thead>
@@ -690,12 +668,9 @@
                 moduloMapping[nomeNormalized] = nome;
             });
 
-            document.getElementById('modulosCargados').textContent = Object.keys(modulosData).length;
-            document.getElementById('modulosInfo').style.display = 'block';
             document.getElementById('autoLoadInfo').style.display = 'block';
 
             displayModulosTable();
-            showSuccess(`Módulos por defecto cargados (${Object.keys(modulosData).length} módulos).`);
         }
 
         // Llamar a la función al cargar la página
@@ -975,6 +950,80 @@
             return normalized;
         }
 
+        function parseModulosCSV(csvText) {
+            const lines = csvText.split('\n');
+            modulosData = {};
+            sesionesPorModulo = {};
+            umbralesPorModulo = {};
+            moduloMapping = {};
+
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line === '') continue;
+
+                const fields = [];
+                let currentField = '';
+                let inQuotes = false;
+
+                for (let j = 0; j < line.length; j++) {
+                    const char = line[j];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        fields.push(currentField);
+                        currentField = '';
+                    } else {
+                        currentField += char;
+                    }
+                }
+                fields.push(currentField);
+
+                if (fields.length >= 5) {
+                    const curso = fields[0].trim();
+                    const codigo = fields[1].trim();
+                    let nome = fields[2].trim();
+                    const horas = parseFloat(fields[3].trim()) || 0;
+                    const periodos = parseInt(fields[4].trim()) || 0;
+
+                    nome = nome.replace(/"/g, '').trim();
+
+                    const sesionesTotales = (horas * 60) / SESION_MINUTOS;
+                    const umbral6 = Math.floor(sesionesTotales * 0.06) + 1;
+                    const umbral4 = Math.floor(sesionesTotales * 0.04) + 1;
+
+                    modulosData[nome] = {
+                        curso,
+                        codigo,
+                        nome,
+                        horas,
+                        periodos,
+                        sesionesTotales: sesionesTotales.toFixed(1),
+                        sesionesNumero: sesionesTotales,
+                        umbral6,
+                        umbral4
+                    };
+
+                    sesionesPorModulo[nome] = sesionesTotales;
+                    umbralesPorModulo[nome] = { umbral6, umbral4 };
+
+                    const nomeNormalized = normalizeModuloName(nome);
+                    moduloMapping[nomeNormalized] = nome;
+
+                    const semParentesis = nome.replace(/[\(\)]/g, '').trim();
+                    moduloMapping[normalizeModuloName(semParentesis)] = nome;
+
+                    const palabras = nomeNormalized.split(' ').filter(p => p.length > 3);
+                    palabras.forEach(palabra => {
+                        moduloMapping[palabra] = nome;
+                    });
+                }
+            }
+
+            displayModulosTable();
+
+            showSuccess(`Cargados ${Object.keys(modulosData).length} módulos desde el CSV.`);
+        }
+
         function findModuloInMapping(moduloName) {
             if (!moduloName) return null;
 
@@ -1127,61 +1176,107 @@
             loadDefaultModules();
         }
 
-function processInput() {
-    const input = document.getElementById('inputText').value;
-    if (!input.trim()) {
-        showError('Por favor, introduce texto o selecciona un archivo de faltas.');
-        return;
-    }
+        function processInput() {
+            const input = document.getElementById('inputText').value;
+            if (!input.trim()) {
+                showError('Por favor, introduce texto o selecciona un archivo de faltas.');
+                return;
+            }
 
-    if (Object.keys(modulosData).length === 0) {
-        showWarning('No hay módulos cargados. Los apercibimientos no se calcularán correctamente.');
-    }
+            if (Object.keys(modulosData).length === 0) {
+                showWarning('No hay módulos cargados. Los apercibimientos no se calcularán correctamente.');
+            }
 
-    try {
-        // Usar el nuevo parser
-        const parser = new FaltasParser();
-        const resultado = parser.parse(input);
-        
-        // Asignar a las variables globales existentes
-        faltasData = resultado.faltasData;
-        alumnos = new Set(resultado.alumnos);
-        alumnosDetalle = resultado.alumnosDetalle;
-        modulos = new Set(resultado.modulos);
-        
-        // Construir la matriz resumen usando el método del parser
-        matrizResumen = resultado.buildResumenMatriz(Array.from(modulos));
-        
-        // Recalcular apercibimientos y comunicaciones
-        recalcularTodo();
-        
-        // Actualizar estadísticas
-        document.getElementById('stats').style.display = 'block';
-        document.getElementById('totalFaltas').textContent = resultado.getTotalFaltas();
-        document.getElementById('totalAlumnos').textContent = resultado.getTotalAlumnos();
-        document.getElementById('totalModulos').textContent = resultado.getTotalModulos();
-        
-        // Mostrar tablas
-        displayFaltasDetalladas();
-        displayResumenTable();
-        displayApercibimientos();
-        displayComunicaciones();
-        
-        // Habilitar botones
-        document.getElementById('downloadBtn').disabled = false;
-        document.getElementById('downloadResumenBtn').disabled = false;
-        document.getElementById('printBtn').disabled = false;
-        
-        // Ocultar controles
-        document.getElementById('controlsSection').classList.add('hidden');
-        
-        showSuccess(`Procesado correctamente. ${resultado.getTotalFaltas()} faltas encontradas.`);
-        
-    } catch (error) {
-        showError('Error al procesar: ' + error.message);
-        console.error(error);
-    }
-}
+            try {
+                lines = input.split('\n');
+                faltasData = [];
+                alumnos.clear();
+                alumnosDetalle = {};
+                modulos.clear();
+
+                let currentStudent = '';
+                let currentStudentFull = '';
+
+                for (let i = 0; i < lines.length; i++) {
+                    let line = lines[i].trimRight();
+
+                    if (line === '') continue;
+
+                    if (line.includes('Centro Educativo') ||
+                        line.includes('CdCentro') ||
+                        line.includes('Dirección Centro') ||
+                        line.includes('Teléfono') ||
+                        line.includes('email') ||
+                        line.includes('web') ||
+                        line.includes('Lista detallada') ||
+                        line.includes('Graos D:') ||
+                        line.includes('1º Desenvolvemento') ||
+                        line.includes('Dende:') ||
+                        line.includes('Apelidos e nome') ||
+                        line.includes('Páxina') ||
+                        line.match(/^Data \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/)) {
+                        continue;
+                    }
+
+                    const studentMatch = line.match(/^(.+?, [^,]+?)(?=\s+\d{2}\/\d{2}\/\d{4})/);
+
+                    if (studentMatch) {
+                        currentStudentFull = studentMatch[1].trim();
+
+                        const nameParts = currentStudentFull.split(',');
+                        if (nameParts.length === 2) {
+                            const apellidos = nameParts[0].trim();
+                            const nombre = nameParts[1].trim();
+
+                            alumnosDetalle[currentStudentFull] = {
+                                apellidos,
+                                nombre
+                            };
+                        }
+
+                        alumnos.add(currentStudentFull);
+
+                        const faltaPart = line.substring(studentMatch[0].length).trim();
+                        if (faltaPart) {
+                            i = processFaltaLineWithContext(currentStudentFull, faltaPart, i);
+                        }
+                    }
+                    else if (currentStudentFull && line.match(/\d{2}\/\d{2}\/\d{4}/)) {
+                        i = processFaltaLineWithContext(currentStudentFull, line, i);
+                    }
+                }
+
+                if (faltasData.length === 0) {
+                    showError('No se pudieron extraer datos. Verifica que el formato sea correcto.');
+                    return;
+                }
+
+                buildResumenMatrix();
+                recalcularTodo();
+
+                document.getElementById('stats').style.display = 'block';
+                document.getElementById('totalFaltas').textContent = faltasData.length;
+                document.getElementById('totalAlumnos').textContent = alumnos.size;
+                document.getElementById('totalModulos').textContent = modulos.size;
+
+                displayFaltasDetalladas();
+                displayResumenTable();
+                displayApercibimientos();
+                displayComunicaciones();
+
+                document.getElementById('downloadBtn').disabled = false;
+                document.getElementById('downloadResumenBtn').disabled = false;
+                document.getElementById('printBtn').disabled = false;
+
+                // Ocultar controles
+                document.getElementById('controlsSection').classList.add('hidden');
+
+            } catch (error) {
+                showError('Error al procesar: ' + error.message);
+                console.error(error);
+            }
+        }
+
         function recalcularTodo() {
             calcularApercibimientosPendientes();
             calcularComunicacionesPendientes();
