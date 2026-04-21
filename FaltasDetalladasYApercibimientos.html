@@ -11,384 +11,31 @@
     <script type="text/javascript" src="datatables/jquery-3.7.1.min.js"></script>
     <script type="text/javascript" src="datatables/datatables.min.js"></script>
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f5f5f5;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        h1 {
-            color: #333;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 10px;
-        }
-
-        .file-input {
-            margin-bottom: 15px;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-        }
-
-        textarea {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-family: monospace;
-            margin-bottom: 10px;
-        }
-
-        button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-right: 10px;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-
-        button:disabled {
-            background-color: #6c757d;
-            cursor: not-allowed;
-        }
-
-        .error {
-            color: #dc3545;
-            padding: 10px;
-            background-color: #f8d7da;
-            border-radius: 4px;
-            margin: 10px 0;
-        }
-
-        .success {
-            color: #155724;
-            background-color: #d4edda;
-            border: 1px solid #c3e6cb;
-            padding: 10px;
-            border-radius: 4px;
-            margin: 10px 0;
-        }
-
-        .warning {
-            color: #856404;
-            background-color: #fff3cd;
-            border: 1px solid #ffeeba;
-            padding: 10px;
-            border-radius: 4px;
-            margin: 10px 0;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            font-size: 14px;
-        }
-
-        th {
-            background-color: #007bff;
-            color: white;
-            padding: 10px;
-            text-align: left;
-        }
-
-        td {
-            border: 1px solid #ddd;
-            padding: 8px;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-
-        .tabs {
-            display: flex;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #dee2e6;
-            flex-wrap: wrap;
-        }
-
-        .tab {
-            padding: 10px 20px;
-            background-color: #e9ecef;
-            cursor: pointer;
-            border: 1px solid #dee2e6;
-            border-bottom: none;
-            margin-right: 5px;
-            border-radius: 4px 4px 0 0;
-        }
-
-        .tab.active {
-            background-color: #007bff;
-            color: white;
-            border-color: #007bff;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .stats-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .stats {
-            background-color: #e9ecef;
-            padding: 10px;
-            border-radius: 4px;
-            flex: 1;
-        }
-
-        .print-button {
-            background-color: #6f42c1;
-            margin-left: 20px;
-            white-space: nowrap;
-        }
-
-        .print-button:hover {
-            background-color: #5a32a3;
-        }
-
-        .print-button:disabled {
-            background-color: #6c757d;
-        }
-
-        .table-container {
-            max-height: 500px;
-            overflow-y: auto;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            margin-top: 10px;
-        }
-
-        .celda-normal {
-            background-color: transparent;
-        }
-
-        .celda-apercibimiento-pendiente {
-            background-color: #fd7e14 !important;
-            /* Naranja */
-            color: white;
-            font-weight: bold;
-        }
-
-        .celda-apercibimiento-enviado {
-            background-color: #fff3cd !important;
-            /* Amarillo más claro */
-            font-weight: bold;
-        }
-
-        .celda-comunicacion-pendiente {
-            background-color: #dc3545 !important;
-            /* Rojo */
-            color: white;
-            font-weight: bold;
-        }
-
-        .celda-comunicacion-enviada {
-            background-color: #000000 !important;
-            /* Negro */
-            color: white !important;
-            font-weight: bold;
-        }
-
-        .info-modulos {
-            background-color: #d1ecf1;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-        }
-
-        .cargando {
-            color: #007bff;
-            font-style: italic;
-        }
-
-        .umbral-info {
-            font-size: 0.85em;
-            color: #666;
-            font-weight: normal;
-            display: block;
-        }
-
-        .auto-load-info {
-            background-color: #cce5ff;
-            border: 1px solid #b8daff;
-            color: #004085;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-        }
-
-        .fecha-info {
-            font-size: 0.85em;
-            color: #666;
-        }
-
-        .action-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-        }
-
-        .action-button {
-            background-color: #28a745;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .action-button:hover {
-            background-color: #218838;
-        }
-
-        .action-button.warning {
-            background-color: #ffc107;
-            color: #000;
-        }
-
-        .action-button.warning:hover {
-            background-color: #e0a800;
-        }
-
-        .action-button.danger {
-            background-color: #dc3545;
-        }
-
-        .action-button.danger:hover {
-            background-color: #c82333;
-        }
-
-        .counter-badge {
-            background-color: #007bff;
-            color: white;
-            border-radius: 12px;
-            padding: 2px 8px;
-            font-size: 12px;
-            margin-left: 5px;
-        }
-
-        .leyenda-colores {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-            margin-bottom: 15px;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-        }
-
-        .color-muestra {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            margin-right: 5px;
-            border: 1px solid #ccc;
-        }
-
-        .header-with-button {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .controls-section {
-            transition: opacity 0.3s ease;
-        }
-
-        .controls-section.hidden {
-            opacity: 0;
-            height: 0;
-            overflow: hidden;
-            margin: 0;
-            padding: 0;
-        }
-
-        .dataTables_wrapper {
-            padding: 10px;
-        }
-
-        .dataTables_length,
-        .dataTables_filter {
-            margin-bottom: 10px;
-        }
-
-        .dataTables_info {
-            margin-top: 10px;
-        }
-
-        .page-break {
-            page-break-before: always;
-        }
-
-        @media print {
-            .page-break {
-                page-break-before: always;
-            }
-        }
-
-        .modulo-precargado-badge {
-            background-color: #28a745;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            margin-left: 10px;
-        }
-    </style>
+<!-- Cargar os datos dos ciclos -->
+<script src="datosCiclos.js"></script>    
+    <!-- Estilos externos -->
+    <link rel="stylesheet" href="css/estilosFaltas.css">
 </head>
 
 <body>
     <div class="container">
         <h1>📊 Analizador de Faltas de Asistencia con Apercibimientos y Comunicaciones</h1>
 
-        <div id="autoLoadInfo" class="auto-load-info">
-            ✅ Módulos del ciclo "Desenvolvemento de aplicacións multiplataforma" precargados por defecto
-        </div>
 
         <div class="controls-section" id="controlsSection">
+
             <div class="file-input">
-                <label><strong>Archivo de módulos (opcional - para actualizar los precargados):</strong></label><br>
-                <input type="file" id="modulosFileInput" accept=".csv" onchange="loadModulosFile(event)">
+                <label><strong>Archivo de faltas (texto desde PDF):</strong> </label><br>
+                Abre o informe PDF de Faltas Detalladas desde o inicio de curso, selecciona todo (Ctrl+A), copia (Ctrl+C) e pega (Ctrl+V)</strong> 
+                <!--<input type="file" id="faltasFileInput" accept=".txt,.csv,text/plain">-->
             </div>
+
+            <textarea id="inputText" rows="10" placeholder="Pega aquí el contenido del archivo de faltas..."></textarea>
+
 
             <div class="file-input">
                 <label><strong>Archivo de apercibimientos y comunicaciones previas (opcional):</strong></label><br>
+                Carga o arquivo de apercibimentos previos para calcular desde as datas de acuse de recibo.<br><br>
                 <input type="file" id="apercibimientosPreviosInput" accept=".csv"
                     onchange="loadApercibimientosPreviosFile(event)">
                 <div id="apercPreviosInfo" class="info-modulos" style="display: none; background-color: #d4edda;">
@@ -396,23 +43,14 @@
                 </div>
             </div>
 
-            <div class="file-input">
-                <label><strong>Archivo de faltas (texto desde PDF):</strong></label><br>
-                <input type="file" id="faltasFileInput" accept=".txt,.csv,text/plain">
-            </div>
-
-            <textarea id="inputText" rows="10" placeholder="Pega aquí el contenido del archivo de faltas..."></textarea>
-
             <button onclick="processInput()" id="processBtn">Procesar</button>
-            <button onclick="clearAll()">Limpiar</button>
-            <button onclick="resetToDefaultModules()" style="background-color: #28a745;">↺ Restaurar módulos por defecto</button>
             <button class="print-button" onclick="generarInformeImpresion()" id="printBtn" disabled>🖨️ Generar Informe
                 para Imprimir</button>            
         </div>
 
-        <div id="error" class="error" style="display: none;"></div>
+        <!--<div id="error" class="error" style="display: none;"></div>
         <div id="success" class="success" style="display: none;"></div>
-        <div id="warning" class="warning" style="display: none;"></div>
+        <div id="warning" class="warning" style="display: none;"></div>-->
 
         <div class="stats-container">
             <div class="stats" id="stats" style="display: none;">
@@ -433,7 +71,16 @@
         </div>
 
         <div id="modulosTab" class="tab-content active">
-            <h3>Módulos y Umbrales</h3>
+            <!-- Selector de ciclos -->
+            <div class="selector-ciclo" style="margin-bottom: 20px; padding: 15px; background-color: #e7f3ff; border-radius: 8px;">
+                <label for="cicloSelector" style="font-weight: bold; margin-right: 10px;">Seleccionar Ciclo Formativo:</label>
+                <select id="cicloSelector" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; min-width: 300px;">
+                    <option value="">Cargando ciclos...</option>
+                </select>
+                <span id="cicloInfo" style="margin-left: 15px; color: #666; font-size: 0.9em;"></span>
+            </div>            
+
+
             <div class="table-container">
                 <table id="modulosTable" class="display">
                     <thead>
@@ -452,11 +99,6 @@
         </div>
 
         <div id="faltasDetalladasTab" class="tab-content">
-            <div class="header-with-button">
-                <h3>📋 Faltas Detalladas</h3>
-                <button class="action-button" onclick="downloadCSV()" id="downloadBtn" disabled>📥 Descargar
-                    CSV</button>
-            </div>
             <div class="table-container">
                 <table id="faltasDetalladasTable" class="display">
                     <thead>
@@ -473,13 +115,23 @@
                     </tbody>
                 </table>
             </div>
+            <div>
+                <button class="action-button" onclick="downloadCSV()" id="downloadBtn" disabled>📥 Descargar
+                    CSV</button>
+            </div>            
         </div>
 
         <div id="resumenTab" class="tab-content">
-            <div class="header-with-button">
-                <h3>📊 Resumen de Faltas por Alumno y Módulo</h3>
-                <button class="action-button" onclick="downloadResumenCSV()" id="downloadResumenBtn" disabled>📥
-                    Descargar CSV</button>
+            <div class="table-container">
+                <table id="resumenTable" class="display">
+                    <thead>
+                        <tr id="tableHeader">
+                            <th>Alumno</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
             </div>
             <div class="leyenda-colores">
                 <div><span class="color-muestra" style="background-color: transparent; border: 1px solid #ccc;"></span>
@@ -492,23 +144,15 @@
                     (≥4% desde último apercibimiento)</div>
                 <div><span class="color-muestra" style="background-color: #000000;"></span> ⚫ Comunicación ya enviada
                 </div>
-            </div>
-            <div class="table-container">
-                <table id="resumenTable" class="display">
-                    <thead>
-                        <tr id="tableHeader">
-                            <th>Alumno</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                    </tbody>
-                </table>
-            </div>
+            </div>            
+            <div class="action-bar">
+                <button class="action-button" onclick="downloadResumenCSV()" id="downloadResumenBtn" disabled>📥
+                    Descargar CSV</button>
+            </div>            
         </div>
 
         <div id="apercibimientosTab" class="tab-content">
             <div class="action-bar">
-                <h3 style="margin: 0;">⚠️ Apercibimientos (≥6% de faltas)</h3>
                 <div id="apercibimientosButtonContainer">
                     <!-- El botón se insertará aquí dinámicamente -->
                 </div>
@@ -533,7 +177,6 @@
 
         <div id="comunicacionesTab" class="tab-content">
             <div class="action-bar">
-                <h3 style="margin: 0;">📢 Comunicaciones PD (4% desde último apercibimiento)</h3>
                 <div id="comunicacionesButtonContainer">
                     <!-- El botón se insertará aquí dinámicamente -->
                 </div>
@@ -593,6 +236,257 @@
         let matrizResumen = {};
         let lines = [];
 
+
+
+
+
+
+
+
+
+// Variables para os ciclos
+let ciclosDisponibles = [];
+let cicloActual = null;
+
+// Cargar os datos dos ciclos desde o ficheiro externo
+function cargarCiclos() {
+    // Comprobar se a variable global datosCiclos existe
+    if (typeof datosCiclos !== 'undefined' && Array.isArray(datosCiclos)) {
+        ciclosDisponibles = datosCiclos;
+        inicializarSelectorCiclos();
+    } else {
+        console.error('Non se puideron cargar os datos dos ciclos');
+        showError('Erro ao cargar os datos dos ciclos. Verifica que o ficheiro datosCiclos.js estea presente.');
+    }
+}
+
+// Inicializar o selector de ciclos
+function inicializarSelectorCiclos() {
+    const selector = document.getElementById('cicloSelector');
+    if (!selector) return;
+    
+    selector.innerHTML = '';
+    
+    ciclosDisponibles.forEach((ciclo, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = `${ciclo.nomeCiclo} (${ciclo.siglasCiclo})`;
+        selector.appendChild(option);
+    });
+    
+    // Seleccionar o primeiro ciclo por defecto
+    if (ciclosDisponibles.length > 0) {
+        selector.value = '0';
+        cargarCicloSeleccionado(0);
+    }
+    
+    // Engadir evento de cambio
+    selector.addEventListener('change', function() {
+        const index = parseInt(this.value);
+        if (!isNaN(index) && ciclosDisponibles[index]) {
+            cargarCicloSeleccionado(index);
+        }
+    });
+}
+
+// Cargar un ciclo específico
+function cargarCicloSeleccionado(index) {
+    cicloActual = ciclosDisponibles[index];
+    
+    // Limpar datos anteriores
+    modulosData = {};
+    sesionesPorModulo = {};
+    umbralesPorModulo = {};
+    moduloMapping = {};
+    
+    // Procesar cada módulo do ciclo
+    cicloActual.modulos.forEach(modulo => {
+        const nome = modulo.nome;
+        const horas = modulo.horas;
+        
+        const sesionesTotales = (horas * 60) / SESION_MINUTOS;
+        const umbral6 = Math.floor(sesionesTotales * 0.06) + 1;
+        const umbral4 = Math.floor(sesionesTotales * 0.04) + 1;
+        
+        modulosData[nome] = {
+            curso: modulo.curso,
+            codigo: modulo.codigo,
+            nome: nome,
+            horas: horas,
+            periodos: modulo.periodosSemanais,
+            sesionesTotales: sesionesTotales.toFixed(1),
+            sesionesNumero: sesionesTotales,
+            umbral6: umbral6,
+            umbral4: umbral4
+        };
+        
+        sesionesPorModulo[nome] = sesionesTotales;
+        umbralesPorModulo[nome] = { umbral6, umbral4 };
+        
+        // Crear mapping para coincidencias
+        const nomeNormalized = normalizeModuloName(nome);
+        moduloMapping[nomeNormalized] = nome;
+        
+        // Mapping sen parénteses
+        const semParentesis = nome.replace(/[\(\)]/g, '').trim();
+        moduloMapping[normalizeModuloName(semParentesis)] = nome;
+        
+        // Mapping por palabras clave
+        const palabras = nomeNormalized.split(' ').filter(p => p.length > 3);
+        palabras.forEach(palabra => {
+            moduloMapping[palabra] = nome;
+        });
+    });
+    
+    // Actualizar información na interface
+    const modulosCargadosSpan = document.getElementById('modulosCargados');
+    if (modulosCargadosSpan) {
+        modulosCargadosSpan.textContent = Object.keys(modulosData).length;
+    }
+    
+    const modulosInfoDiv = document.getElementById('modulosInfo');
+    if (modulosInfoDiv) {
+        modulosInfoDiv.style.display = 'block';
+        modulosInfoDiv.innerHTML = `📚 Módulos cargados: ${Object.keys(modulosData).length} - Ciclo: <strong>${cicloActual.nomeCiclo}</strong>`;
+    }
+    
+    const cicloInfoSpan = document.getElementById('cicloInfo');
+    if (cicloInfoSpan) {
+        cicloInfoSpan.innerHTML = `✅ Ciclo cargado: <strong>${cicloActual.nomeCiclo}</strong> (${cicloActual.modulos.length} módulos)`;
+    }
+    
+    // Amosar a táboa de módulos (FORZAR actualización)
+    actualizarTablaModulos();
+    
+    // Se xa hai faltas cargadas, recalcular todo
+    if (faltasData.length > 0) {
+        recalcularTodo();
+        displayResumenTable();
+        displayApercibimientos();
+        displayComunicaciones();
+    }
+    
+    showSuccess(`Cargado o ciclo "${cicloActual.nomeCiclo}" con ${cicloActual.modulos.length} módulos.`);
+}
+
+// Función para actualizar a táboa de módulos
+function actualizarTablaModulos() {
+    // Destruír DataTable existente se existe
+    if ($.fn.DataTable && $.fn.DataTable.isDataTable('#modulosTable')) {
+        $('#modulosTable').DataTable().destroy();
+    }
+    
+    // Construír o corpo da táboa
+    let body = '';
+    const modulosOrdenados = Object.keys(modulosData).sort();
+    
+    if (modulosOrdenados.length === 0) {
+        body = '<tr><td colspan="5" style="text-align: center;">Non hai módulos cargados para este ciclo</td></tr>';
+    } else {
+        modulosOrdenados.forEach(nome => {
+            const m = modulosData[nome];
+            body += `<tr>
+                <td><strong>${m.nome}</strong> <span style="color: #666; font-size: 0.85em;">(${m.curso})</span></td>
+                <td style="text-align: center;">${m.horas}</td>
+                <td style="text-align: center;">${m.sesionesTotales}</td>
+                <td style="text-align: center; font-weight: bold; color: #dc3545;">${m.umbral6}</td>
+                <td style="text-align: center; font-weight: bold; color: #fd7e14;">${m.umbral4}</td>
+            </tr>`;
+        });
+    }
+    
+    // Actualizar o corpo da táboa
+    const modulosBody = document.getElementById('modulosBody');
+    if (modulosBody) {
+        modulosBody.innerHTML = body;
+    }
+    
+    // Reinicializar DataTable
+    if ($.fn.DataTable) {
+        $('#modulosTable').DataTable({
+            language: datatableSpanish,
+            pageLength: 100,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+            order: [[0, 'asc']]
+        });
+    }
+}
+
+
+// Modificar a función displayModulosTable para que use DataTables con filtro
+function displayModulosTable() {
+    let body = '';
+    const modulosOrdenados = Object.keys(modulosData).sort();
+    
+    modulosOrdenados.forEach(nome => {
+        const m = modulosData[nome];
+        body += `<tr>
+            <td><strong>${m.nome}</strong> <span style="color: #666; font-size: 0.85em;">(${m.curso})</span></td>
+            <td style="text-align: center;">${m.horas}</td>
+            <td style="text-align: center;">${m.sesionesTotales}</td>
+            <td style="text-align: center; font-weight: bold; color: #dc3545;">${m.umbral6}</td>
+            <td style="text-align: center; font-weight: bold; color: #fd7e14;">${m.umbral4}</td>
+        </tr>`;
+    });
+    
+    document.getElementById('modulosBody').innerHTML = body;
+    
+    // Inicializar ou actualizar DataTable
+    if ($.fn.DataTable) {
+        if ($.fn.DataTable.isDataTable('#modulosTable')) {
+            $('#modulosTable').DataTable().destroy();
+        }
+        
+        $('#modulosTable').DataTable({
+            language: datatableSpanish,
+            pageLength: 100,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+            order: [[0, 'asc']],
+            // Engadir un filtro adicional para curso
+            initComplete: function() {
+                // Engadir un selector de filtro por curso
+                const api = this.api();
+                const header = $('#modulosTable thead tr');
+                
+
+                // Aplicar filtros
+                $('#modulosTable thead .filtro-curso input').on('keyup change', function() {
+                    const colIndex = $(this).closest('th').index();
+                    api.column(colIndex).search(this.value).draw();
+                });
+            }
+        });
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         // Datos de módulos desde CSV
         let modulosData = {};
         let sesionesPorModulo = {};
@@ -617,77 +511,12 @@
         // Configuración
         const SESION_MINUTOS = 50;
 
-        // Módulos por defecto (Desenvolvemento de aplicacións multiplataforma)
-        const defaultModulosData = {
-            "Bases de datos": { curso: "1º", codigo: "MP0484", nome: "Bases de datos", horas: 187, periodos: 7 },
-            "Contornos de desenvolvemento": { curso: "1º", codigo: "MP0487", nome: "Contornos de desenvolvemento", horas: 78, periodos: 3 },
-            "Inglés profesional (GS)": { curso: "1º", codigo: "MP0179", nome: "Inglés profesional (GS)", horas: 60, periodos: 2 },
-            "Itinerario persoal para a empregabilidade I": { curso: "1º", codigo: "MP1709", nome: "Itinerario persoal para a empregabilidade I", horas: 107, periodos: 4 },
-            "Linguaxes de marcas e sistemas de xestión de información": { curso: "1º", codigo: "MP0373", nome: "Linguaxes de marcas e sistemas de xestión de información", horas: 103, periodos: 4 },
-            "Programación": { curso: "1º", codigo: "MP0485", nome: "Programación", horas: 240, periodos: 9 },
-            "Sistemas informáticos": { curso: "1º", codigo: "MP0483", nome: "Sistemas informáticos", horas: 155, periodos: 6 },
-            "Sostibilidade aplicada ao sistema produtivo": { curso: "1º", codigo: "MP1708", nome: "Sostibilidade aplicada ao sistema produtivo", horas: 30, periodos: 1 },
-            "Acceso a datos": { curso: "2º", codigo: "MP0486", nome: "Acceso a datos", horas: 220, periodos: 8 },
-            "Afondamento nas competencias profesionais (GS)": { curso: "2º", codigo: "MO0004", nome: "Afondamento nas competencias profesionais (GS)", horas: 30, periodos: 1 },
-            "Desenvolvemento de interfaces": { curso: "2º", codigo: "MP0488", nome: "Desenvolvemento de interfaces", horas: 191, periodos: 7 },
-            "Dixitalización aplicada aos sectores produtivos (GS)": { curso: "2º", codigo: "MP1665", nome: "Dixitalización aplicada aos sectores produtivos (GS)", horas: 30, periodos: 1 },
-            "Habilidades comunicativas en lingua estranxeira (GS)": { curso: "2º", codigo: "MO0002", nome: "Habilidades comunicativas en lingua estranxeira (GS)", horas: 60, periodos: 2 },
-            "Itinerario persoal para a empregabilidade II": { curso: "2º", codigo: "MP1710", nome: "Itinerario persoal para a empregabilidade II", horas: 50, periodos: 2 },
-            "Programación de servizos e procesos": { curso: "2º", codigo: "MP0490", nome: "Programación de servizos e procesos", horas: 109, periodos: 4 },
-            "Programación multimedia e dispositivos móbiles": { curso: "2º", codigo: "MP0489", nome: "Programación multimedia e dispositivos móbiles", horas: 191, periodos: 7 },
-            "Proxecto intermodular de desenvolvemento de aplicacións multiplataforma": { curso: "2º", codigo: "MP0492", nome: "Proxecto intermodular de desenvolvemento de aplicacións multiplataforma", horas: 50, periodos: 0 },
-            "Sistemas de xestión empresarial": { curso: "2º", codigo: "MP0491", nome: "Sistemas de xestión empresarial", horas: 109, periodos: 4 }
-        };
 
-        // Función para cargar los módulos por defecto
-        function loadDefaultModules() {
-            modulosData = {};
-            sesionesPorModulo = {};
-            umbralesPorModulo = {};
-            moduloMapping = {};
+// Modificar o window.onload existente
+window.onload = function() {
+    cargarCiclos(); // Cargar os ciclos en lugar dos módulos por defecto
+};        
 
-            Object.keys(defaultModulosData).forEach(nome => {
-                const m = defaultModulosData[nome];
-                
-                const sesionesTotales = (m.horas * 60) / SESION_MINUTOS;
-                const umbral6 = Math.floor(sesionesTotales * 0.06) + 1;
-                const umbral4 = Math.floor(sesionesTotales * 0.04) + 1;
-
-                modulosData[nome] = {
-                    ...m,
-                    sesionesTotales: sesionesTotales.toFixed(1),
-                    sesionesNumero: sesionesTotales,
-                    umbral6,
-                    umbral4
-                };
-
-                sesionesPorModulo[nome] = sesionesTotales;
-                umbralesPorModulo[nome] = { umbral6, umbral4 };
-
-                const nomeNormalized = normalizeModuloName(nome);
-                moduloMapping[nomeNormalized] = nome;
-            });
-
-            document.getElementById('autoLoadInfo').style.display = 'block';
-
-            displayModulosTable();
-        }
-
-        // Llamar a la función al cargar la página
-        window.onload = function() {
-            loadDefaultModules();
-        };
-
-        function resetToDefaultModules() {
-            loadDefaultModules();
-            if (faltasData.length > 0) {
-                recalcularTodo();
-                displayResumenTable();
-                displayApercibimientos();
-                displayComunicaciones();
-            }
-            showSuccess('Módulos restaurados a los valores por defecto.');
-        }
 
         function fixEncoding(text) {
             return text
@@ -750,21 +579,6 @@
             const month = String(today.getMonth() + 1).padStart(2, '0');
             const day = String(today.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
-        }
-
-        function loadModulosFile(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    let result = e.target.result;
-                    if (result.includes('Ã±') || result.includes('Ã³') || result.includes('Ã¡')) {
-                        result = fixEncoding(result);
-                    }
-                    parseModulosCSV(result);
-                };
-                reader.readAsText(file, 'ISO-8859-1');
-            }
         }
 
         function loadApercibimientosPreviosFile(event) {
@@ -950,79 +764,6 @@
             return normalized;
         }
 
-        function parseModulosCSV(csvText) {
-            const lines = csvText.split('\n');
-            modulosData = {};
-            sesionesPorModulo = {};
-            umbralesPorModulo = {};
-            moduloMapping = {};
-
-            for (let i = 1; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (line === '') continue;
-
-                const fields = [];
-                let currentField = '';
-                let inQuotes = false;
-
-                for (let j = 0; j < line.length; j++) {
-                    const char = line[j];
-                    if (char === '"') {
-                        inQuotes = !inQuotes;
-                    } else if (char === ',' && !inQuotes) {
-                        fields.push(currentField);
-                        currentField = '';
-                    } else {
-                        currentField += char;
-                    }
-                }
-                fields.push(currentField);
-
-                if (fields.length >= 5) {
-                    const curso = fields[0].trim();
-                    const codigo = fields[1].trim();
-                    let nome = fields[2].trim();
-                    const horas = parseFloat(fields[3].trim()) || 0;
-                    const periodos = parseInt(fields[4].trim()) || 0;
-
-                    nome = nome.replace(/"/g, '').trim();
-
-                    const sesionesTotales = (horas * 60) / SESION_MINUTOS;
-                    const umbral6 = Math.floor(sesionesTotales * 0.06) + 1;
-                    const umbral4 = Math.floor(sesionesTotales * 0.04) + 1;
-
-                    modulosData[nome] = {
-                        curso,
-                        codigo,
-                        nome,
-                        horas,
-                        periodos,
-                        sesionesTotales: sesionesTotales.toFixed(1),
-                        sesionesNumero: sesionesTotales,
-                        umbral6,
-                        umbral4
-                    };
-
-                    sesionesPorModulo[nome] = sesionesTotales;
-                    umbralesPorModulo[nome] = { umbral6, umbral4 };
-
-                    const nomeNormalized = normalizeModuloName(nome);
-                    moduloMapping[nomeNormalized] = nome;
-
-                    const semParentesis = nome.replace(/[\(\)]/g, '').trim();
-                    moduloMapping[normalizeModuloName(semParentesis)] = nome;
-
-                    const palabras = nomeNormalized.split(' ').filter(p => p.length > 3);
-                    palabras.forEach(palabra => {
-                        moduloMapping[palabra] = nome;
-                    });
-                }
-            }
-
-            displayModulosTable();
-
-            showSuccess(`Cargados ${Object.keys(modulosData).length} módulos desde el CSV.`);
-        }
 
         function findModuloInMapping(moduloName) {
             if (!moduloName) return null;
@@ -1051,37 +792,6 @@
             }
 
             return null;
-        }
-
-        function displayModulosTable() {
-            let body = '';
-            const modulosOrdenados = Object.keys(modulosData).sort();
-
-            modulosOrdenados.forEach(nome => {
-                const m = modulosData[nome];
-                body += `<tr>
-                    <td><strong>${m.nome}</strong></td>
-                    <td style="text-align: center;">${m.horas}</td>
-                    <td style="text-align: center;">${m.sesionesTotales}</td>
-                    <td style="text-align: center; font-weight: bold; color: #dc3545;">${m.umbral6}</td>
-                    <td style="text-align: center; font-weight: bold; color: #fd7e14;">${m.umbral4}</td>
-                </tr>`;
-            });
-
-            document.getElementById('modulosBody').innerHTML = body;
-
-            // Inicializar DataTable
-            if ($.fn.DataTable) {
-                if ($.fn.DataTable.isDataTable('#modulosTable')) {
-                    $('#modulosTable').DataTable().destroy();
-                }
-                $('#modulosTable').DataTable({
-                    language: datatableSpanish,
-                    pageLength: 100,
-                    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
-                    order: [[0, 'asc']]
-                });
-            }
         }
 
         document.getElementById('faltasFileInput').addEventListener('change', function (e) {
@@ -1121,60 +831,6 @@
             }
         }
 
-        function clearAll() {
-            document.getElementById('inputText').value = '';
-            document.getElementById('faltasFileInput').value = '';
-            document.getElementById('modulosFileInput').value = '';
-            document.getElementById('apercibimientosPreviosInput').value = '';
-            document.getElementById('error').style.display = 'none';
-            document.getElementById('success').style.display = 'none';
-            document.getElementById('warning').style.display = 'none';
-            document.getElementById('stats').style.display = 'none';
-            document.getElementById('apercPreviosInfo').style.display = 'none';
-
-            document.getElementById('downloadBtn').disabled = true;
-            document.getElementById('downloadResumenBtn').disabled = true;
-            document.getElementById('printBtn').disabled = true;
-
-            document.getElementById('faltasDetalladasBody').innerHTML = '';
-            document.getElementById('tableBody').innerHTML = '';
-            document.getElementById('tableHeader').innerHTML = '<th>Alumno</th>';
-            document.getElementById('apercibimientosBody').innerHTML = '';
-            document.getElementById('comunicacionesBody').innerHTML = '';
-
-            document.getElementById('apercibimientosButtonContainer').innerHTML = '';
-            document.getElementById('comunicacionesButtonContainer').innerHTML = '';
-
-            document.getElementById('controlsSection').classList.remove('hidden');
-
-            faltasData = [];
-            alumnos.clear();
-            alumnosDetalle = {};
-            modulos.clear();
-            matrizResumen = {};
-            lines = [];
-            apercibimientosPendientes = [];
-            comunicacionesPendientes = [];
-
-            // Destruir DataTables si existen
-            if ($.fn.DataTable) {
-                if ($.fn.DataTable.isDataTable('#faltasDetalladasTable')) {
-                    $('#faltasDetalladasTable').DataTable().destroy();
-                }
-                if ($.fn.DataTable.isDataTable('#resumenTable')) {
-                    $('#resumenTable').DataTable().destroy();
-                }
-                if ($.fn.DataTable.isDataTable('#apercibimientosTable')) {
-                    $('#apercibimientosTable').DataTable().destroy();
-                }
-                if ($.fn.DataTable.isDataTable('#comunicacionesTable')) {
-                    $('#comunicacionesTable').DataTable().destroy();
-                }
-            }
-
-            // Restaurar módulos por defecto
-            loadDefaultModules();
-        }
 
         function processInput() {
             const input = document.getElementById('inputText').value;

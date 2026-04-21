@@ -235,14 +235,6 @@
             display: block;
         }
 
-        .encoding-info {
-            background-color: #fff3cd;
-            padding: 5px 10px;
-            border-radius: 4px;
-            margin-bottom: 10px;
-            font-size: 0.9em;
-        }
-
         .auto-load-info {
             background-color: #cce5ff;
             border: 1px solid #b8daff;
@@ -393,9 +385,6 @@
             <div class="file-input">
                 <label><strong>Archivo de módulos (opcional - para actualizar los precargados):</strong></label><br>
                 <input type="file" id="modulosFileInput" accept=".csv" onchange="loadModulosFile(event)">
-                <div id="modulosInfo" class="info-modulos">
-                    Módulos cargados: <span id="modulosCargados">19</span> (precargados por defecto)
-                </div>
             </div>
 
             <div class="file-input">
@@ -417,6 +406,8 @@
             <button onclick="processInput()" id="processBtn">Procesar</button>
             <button onclick="clearAll()">Limpiar</button>
             <button onclick="resetToDefaultModules()" style="background-color: #28a745;">↺ Restaurar módulos por defecto</button>
+            <button class="print-button" onclick="generarInformeImpresion()" id="printBtn" disabled>🖨️ Generar Informe
+                para Imprimir</button>            
         </div>
 
         <div id="error" class="error" style="display: none;"></div>
@@ -430,8 +421,7 @@
                 <span id="totalAlumnos">0</span> alumnos ·
                 <span id="totalModulos">0</span> módulos
             </div>
-            <button class="print-button" onclick="generarInformeImpresion()" id="printBtn" disabled>🖨️ Generar Informe
-                para Imprimir</button>
+
         </div>
 
         <div class="tabs">
@@ -444,15 +434,6 @@
 
         <div id="modulosTab" class="tab-content active">
             <h3>Módulos y Umbrales</h3>
-            <div class="encoding-info">
-                ✅ Los nombres de módulos se muestran correctamente (codificación UTF-8)
-            </div>
-            <div class="info-modulos">
-                <p><strong>Cálculo de sesiones:</strong> Cada sesión = 50 minutos · Horas totales × 60 ÷ 50 = sesiones
-                    (con 1 decimal)</p>
-                <p><strong>Umbral Comunicación PD (4%):</strong> floor(sesiones × 0.04) + 1</p>
-                <p><strong>Umbral Apercibimiento PD (6%):</strong> floor(sesiones × 0.06) + 1</p>
-            </div>
             <div class="table-container">
                 <table id="modulosTable" class="display">
                     <thead>
@@ -687,12 +668,9 @@
                 moduloMapping[nomeNormalized] = nome;
             });
 
-            document.getElementById('modulosCargados').textContent = Object.keys(modulosData).length;
-            document.getElementById('modulosInfo').style.display = 'block';
             document.getElementById('autoLoadInfo').style.display = 'block';
 
             displayModulosTable();
-            showSuccess(`Módulos por defecto cargados (${Object.keys(modulosData).length} módulos).`);
         }
 
         // Llamar a la función al cargar la página
@@ -1040,9 +1018,6 @@
                     });
                 }
             }
-
-            document.getElementById('modulosCargados').textContent = Object.keys(modulosData).length;
-            document.getElementById('modulosInfo').style.display = 'block';
 
             displayModulosTable();
 

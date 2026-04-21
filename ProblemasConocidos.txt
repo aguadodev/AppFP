@@ -1,3 +1,16 @@
 Inconsistencias del Xade:
 - Apellidos compuestos como "Ramírez de Aguilera Cruz" o "da Silva Ribeiro" en el informe deFaltas detalladas se generan con la partícula "De" o "Da" en mayúscula.
 - La aplicación AppFP puede no separar correctamente los dos apellidos a partir de la cadena conjunta del informe.
+
+
+Completar datos de ciclos de IES Chan do Monte.
+Plan LOE	Réxime xeral-ordinario	Ciclo Medio - Actividades comerciais	Presencial
+Plan LOE	Réxime xeral-ordinario	Ciclo Medio - Instalacións frigoríficas e de climatización	Presencial
+Plan LOE	Réxime xeral-ordinario	Ciclo Medio - Sistemas microinformáticos e redes	Presencial
+Plan LOE	Réxime xeral-ordinario	Ciclo Medio - Xestión administrativa	Presencial
+Plan LOE	Réxime xeral-ordinario	Ciclo Superior - Administración de sistemas informáticos en rede	Presencial
+Plan LOE	Réxime xeral-ordinario	Ciclo Superior - Desenvolvemento de aplicacións multiplataforma	Presencial
+Plan LOE	Réxime xeral-ordinario	Ciclo Superior - Márketing e publicidade	Presencial
+Plan LOE	Réxime de adultos	Ciclo Medio - Sistemas microinformáticos e redes	Presencial
+
+https://www.edu.xunta.gal/fp/familias-profesionais
