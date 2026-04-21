@@ -3,7 +3,12 @@ Inconsistencias del Xade:
 - La aplicación AppFP puede no separar correctamente los dos apellidos a partir de la cadena conjunta del informe.
 
 
-Completar datos de ciclos de IES Chan do Monte.
+MEJORAS PENDIENTES:
+
+
+
+MÓDULOS
+* Completar datos de ciclos y módulos de IES Chan do Monte.
 Plan LOE	Réxime xeral-ordinario	Ciclo Medio - Actividades comerciais	Presencial
 Plan LOE	Réxime xeral-ordinario	Ciclo Medio - Instalacións frigoríficas e de climatización	Presencial
 Plan LOE	Réxime xeral-ordinario	Ciclo Medio - Sistemas microinformáticos e redes	Presencial
@@ -14,3 +19,18 @@ Plan LOE	Réxime xeral-ordinario	Ciclo Superior - Márketing e publicidade	Prese
 Plan LOE	Réxime de adultos	Ciclo Medio - Sistemas microinformáticos e redes	Presencial
 
 https://www.edu.xunta.gal/fp/familias-profesionais
+
+Generar el JSON de los ciclos
+- Incluir ya en el JSON el cálculo de los umbrales?
+- En la solapa de 1.Módulos incluir la columna de Curso (1º/2º) y ordenar por defecto por ella.
+
+
+
+FALTAS
+* Al pegar el contenido de las faltas, filtrar el ciclo y curso afectado y visualizar las faltas
+* Permitir introducir el fichero de apercibimientos y recalcular la tabla resumen y las otras solapas.
+
+
+
+PRUEBAS:
+- 2026/04/21 - Parsea correctamente las faltas detalaldas de ASIR1
