@@ -19,38 +19,30 @@
 
 <body>
     <div class="container">
-        <h1>📊 Analizador de Faltas de Asistencia con Apercibimientos y Comunicaciones</h1>
-
+        <h1>📊 Analizador de Faltas de Asistencia con Apercibimientos y Comunicaciones</h1>        
 
         <div class="controls-section" id="controlsSection">
-
+            <h2>Datos de Entrada</h2>
             <div class="file-input">
-                <label><strong>Archivo de faltas (texto desde PDF):</strong> </label><br>
-                Abre o informe PDF de Faltas Detalladas desde o inicio de curso, selecciona todo (Ctrl+A), copia (Ctrl+C) e pega (Ctrl+V)</strong> 
-                <!--<input type="file" id="faltasFileInput" accept=".txt,.csv,text/plain">-->
-            </div>
+                <label><strong>1. Faltas Detalladas desde o inicio de curso (Informe AL030):</strong> </label><br>
+                </strong> 
+            <textarea id="inputText" rows="2" placeholder="Abre o informe, selecciona todo (Ctrl+A), copia (Ctrl+C) e pega (Ctrl+V)"></textarea>
 
-            <textarea id="inputText" rows="10" placeholder="Pega aquí el contenido del archivo de faltas..."></textarea>
-
-
-            <div class="file-input">
-                <label><strong>Archivo de apercibimientos y comunicaciones previas (opcional):</strong></label><br>
-                Carga o arquivo de apercibimentos previos para calcular desde as datas de acuse de recibo.<br><br>
+                <label><strong>2. Arquivo de apercibimentos e comunicacións PD previas (opcional):</strong></label>
                 <input type="file" id="apercibimientosPreviosInput" accept=".csv"
                     onchange="loadApercibimientosPreviosFile(event)">
-                <div id="apercPreviosInfo" class="info-modulos" style="display: none; background-color: #d4edda;">
-                    Registros previos cargados: <span id="apercPreviosCargados">0</span>
-                </div>
-            </div>
-
-            <button onclick="processInput()" id="processBtn">Procesar</button>
-            <button class="print-button" onclick="generarInformeImpresion()" id="printBtn" disabled>🖨️ Generar Informe
-                para Imprimir</button>            
+            </div>         
         </div>
 
-        <!--<div id="error" class="error" style="display: none;"></div>
+        <div id="error" class="error" style="display: none;"></div>
         <div id="success" class="success" style="display: none;"></div>
-        <div id="warning" class="warning" style="display: none;"></div>-->
+        <div id="warning" class="warning" style="display: none;"></div>
+
+        <button onclick="toggleControlsSection()" id="toggleControlsBtn">📁 Ocultar Controles</button>
+        <button onclick="processInput()" id="processBtn">Procesar</button>
+        <button class="action-button warning" onclick="guardarApercibimientos()">💾 Guardar apercibimientos/comunicaciones</button>        
+        <button class="print-button" onclick="generarInformeImpresion()" id="printBtn" disabled>🖨️ Generar Informe para Imprimir</button>          
+
 
         <div class="stats-container">
             <div class="stats" id="stats" style="display: none;">
@@ -69,6 +61,8 @@
             <div class="tab" onclick="showTab('apercibimientos')">⚠️ 4. Apercibimientos (6%)</div>
             <div class="tab" onclick="showTab('comunicaciones')">📢 5. Comunicaciones PD (4%)</div>
         </div>
+
+
 
         <div id="modulosTab" class="tab-content active">
             <!-- Selector de ciclos -->
@@ -152,11 +146,6 @@
         </div>
 
         <div id="apercibimientosTab" class="tab-content">
-            <div class="action-bar">
-                <div id="apercibimientosButtonContainer">
-                    <!-- El botón se insertará aquí dinámicamente -->
-                </div>
-            </div>
             <div class="table-container">
                 <table id="apercibimientosTable" class="display">
                     <thead>
@@ -176,11 +165,6 @@
         </div>
 
         <div id="comunicacionesTab" class="tab-content">
-            <div class="action-bar">
-                <div id="comunicacionesButtonContainer">
-                    <!-- El botón se insertará aquí dinámicamente -->
-                </div>
-            </div>
             <div class="table-container">
                 <table id="comunicacionesTable" class="display">
                     <thead>
@@ -237,6 +221,45 @@
         let lines = [];
 
 
+        // Variables para os ciclos
+        let ciclosDisponibles = [];
+        let cicloActual = null;
+
+
+        // Datos de módulos desde CSV
+        let modulosData = {};
+        let sesionesPorModulo = {};
+        let umbralesPorModulo = {};
+
+        // Datos de apercibimientos y comunicaciones previas
+        let apercibimientosPrevios = new Set(); // Formato: "alumno|modulo" (en minúsculas para comparación)
+        let comunicacionesPrevias = new Set(); // Formato: "alumno|modulo" para comunicaciones ya enviadas
+        let apercibimientosPreviosDetalle = [];
+        let apercibimientosPorAlumnoModulo = {}; // Mapa para acceso rápido a fecha de acuse de apercibimientos
+
+        // Datos calculados
+        let apercibimientosPendientes = []; // Apercibimientos no enviados (≥6%)
+        let comunicacionesPendientes = []; // Comunicaciones no enviadas (≥4% desde último apercibimiento)
+
+        // Mapeo de nombres de módulos (para coincidencias aproximadas)
+        let moduloMapping = {};
+
+        // Contenido original del archivo de apercibimientos (para concatenar)
+        let contenidoOriginalApercibimientos = 'TIPO INFORME,DATA INFORME,DATA ACUSE,APELIDOS,NOME,MATERIA\n';
+
+        // Configuración
+        const SESION_MINUTOS = 50;
+
+
+// Modificar o window.onload existente
+window.onload = function() {
+    cargarCiclos(); // Cargar os ciclos en lugar dos módulos por defecto
+};        
+
+
+
+
+document.getElementById('inputText').addEventListener('input', processInput);
 
 
 
@@ -244,9 +267,24 @@
 
 
 
-// Variables para os ciclos
-let ciclosDisponibles = [];
-let cicloActual = null;
+
+
+
+function toggleControlsSection() {
+    const section = document.getElementById('controlsSection');
+    const btn = document.getElementById('toggleControlsBtn');
+    if (section.style.display === 'none') {
+        section.style.display = 'block';
+        btn.innerHTML = '📁 Ocultar Controles';
+    } else {
+        section.style.display = 'none';
+        btn.innerHTML = '📁 Mostrar Controles';
+    }
+}
+
+
+
+
 
 // Cargar os datos dos ciclos desde o ficheiro externo
 function cargarCiclos() {
@@ -463,63 +501,9 @@ function displayModulosTable() {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        // Datos de módulos desde CSV
-        let modulosData = {};
-        let sesionesPorModulo = {};
-        let umbralesPorModulo = {};
-
-        // Datos de apercibimientos y comunicaciones previas
-        let apercibimientosPrevios = new Set(); // Formato: "alumno|modulo" (en minúsculas para comparación)
-        let comunicacionesPrevias = new Set(); // Formato: "alumno|modulo" para comunicaciones ya enviadas
-        let apercibimientosPreviosDetalle = [];
-        let apercibimientosPorAlumnoModulo = {}; // Mapa para acceso rápido a fecha de acuse de apercibimientos
-
-        // Datos calculados
-        let apercibimientosPendientes = []; // Apercibimientos no enviados (≥6%)
-        let comunicacionesPendientes = []; // Comunicaciones no enviadas (≥4% desde último apercibimiento)
-
-        // Mapeo de nombres de módulos (para coincidencias aproximadas)
-        let moduloMapping = {};
-
-        // Contenido original del archivo de apercibimientos (para concatenar)
-        let contenidoOriginalApercibimientos = 'TIPO INFORME,DATA INFORME,DATA ACUSE,APELIDOS,NOME,MATERIA\n';
-
-        // Configuración
-        const SESION_MINUTOS = 50;
-
-
-// Modificar o window.onload existente
-window.onload = function() {
-    cargarCiclos(); // Cargar os ciclos en lugar dos módulos por defecto
-};        
-
-
         function fixEncoding(text) {
             return text
+                .replace(/Ã§/g, 'ç')
                 .replace(/Ã±/g, 'ñ')
                 .replace(/Ã¡/g, 'á')
                 .replace(/Ã©/g, 'é')
@@ -598,6 +582,7 @@ window.onload = function() {
         }
 
         function parseApercibimientosPreviosCSV(csvText) {
+            console.log('Borrando datos previos y cargando nuevos desde CSV...');
             const lines = csvText.split('\n');
             apercibimientosPrevios.clear();
             comunicacionesPrevias.clear();
@@ -606,7 +591,6 @@ window.onload = function() {
 
             // Saltar cabecera
             const header = lines[0].trim();
-            const tieneDosApellidos = header.includes('1º APELIDO') && header.includes('2º APELIDO');
 
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
@@ -629,121 +613,70 @@ window.onload = function() {
                 }
                 fields.push(currentField);
 
-                if (tieneDosApellidos && fields.length >= 7) {
-                    // Formato antiguo: con dos apellidos separados
-                    const tipo = fields[0].trim();
-                    const dataInforme = fields[1].trim();
-                    const dataAcuse = fields[2].trim();
-                    const apellido1 = fields[3].trim();
-                    const apellido2 = fields[4].trim();
-                    const nome = fields[5].trim();
-                    const materia = fields[6].trim();
+                // Formato nuevo: apellidos en una sola columna
+                const tipo = fields[0].trim();
+                const dataInforme = fields[1].trim();
+                const dataAcuse = fields[2].trim();
+                const apellidos = fields[3].trim();
+                const nome = fields[4].trim();
+                const materia = fields[5].trim();
 
-                    // Construir apellidos completos
-                    const apellidosCompletos = apellido2 ? `${apellido1} ${apellido2}` : apellido1;
+                // Construir nombre completo (formato: "Apellidos, Nombre")
+                const nombreCompleto = `${apellidos}, ${nome}`;
 
-                    // Construir nombre completo (formato: "Apellidos, Nombre")
-                    const nombreCompleto = `${apellidosCompletos}, ${nome}`;
+                // Buscar el módulo real en el mapping
+                const moduloReal = findModuloInMapping(materia);
+                const modulo = moduloReal || materia;
 
-                    // Buscar el módulo real en el mapping
-                    const moduloReal = findModuloInMapping(materia);
-                    const modulo = moduloReal || materia;
+                // Guardar según el tipo
+                const keyBase = `${normalizeString(nombreCompleto)}|${normalizeString(modulo)}`;
 
-                    // Guardar según el tipo
-                    const keyBase = `${normalizeString(nombreCompleto)}|${normalizeString(modulo)}`;
+                if (tipo.includes('Apercibimento')) {
+                    apercibimientosPrevios.add(keyBase);
 
-                    if (tipo.includes('Apercibimento')) {
-                        apercibimientosPrevios.add(keyBase);
+                    // Guardar el detalle con fecha de acuse
+                    const acuseDate = parseDate(dataAcuse);
 
-                        // Guardar el detalle con fecha de acuse
-                        const acuseDate = parseDate(dataAcuse);
+                    apercibimientosPreviosDetalle.push({
+                        tipo,
+                        dataInforme,
+                        dataAcuse,
+                        fechaAcuse: acuseDate,
+                        apellidos,
+                        nome,
+                        materia: modulo,
+                        nombreCompleto
+                    });
 
-                        apercibimientosPreviosDetalle.push({
-                            tipo,
-                            dataInforme,
-                            dataAcuse,
+                    // Guardar en mapa para acceso rápido
+                    const existing = apercibimientosPorAlumnoModulo[keyBase];
+                    if (!existing || (acuseDate && (!existing.fechaAcuse || acuseDate > existing.fechaAcuse))) {
+                        apercibimientosPorAlumnoModulo[keyBase] = {
                             fechaAcuse: acuseDate,
-                            apellidos: apellidosCompletos,
-                            nome,
-                            materia: modulo,
-                            nombreCompleto
-                        });
-
-                        // Guardar en mapa para acceso rápido
-                        const existing = apercibimientosPorAlumnoModulo[keyBase];
-                        if (!existing || (acuseDate && (!existing.fechaAcuse || acuseDate > existing.fechaAcuse))) {
-                            apercibimientosPorAlumnoModulo[keyBase] = {
-                                fechaAcuse: acuseDate,
-                                dataAcuse,
-                                dataInforme,
-                                tipo
-                            };
-                        }
-                    } else if (tipo.includes('Comunicación')) {
-                        comunicacionesPrevias.add(keyBase);
-                    }
-
-                } else if (!tieneDosApellidos && fields.length >= 6) {
-                    // Formato nuevo: apellidos en una sola columna
-                    const tipo = fields[0].trim();
-                    const dataInforme = fields[1].trim();
-                    const dataAcuse = fields[2].trim();
-                    const apellidos = fields[3].trim();
-                    const nome = fields[4].trim();
-                    const materia = fields[5].trim();
-
-                    // Construir nombre completo (formato: "Apellidos, Nombre")
-                    const nombreCompleto = `${apellidos}, ${nome}`;
-
-                    // Buscar el módulo real en el mapping
-                    const moduloReal = findModuloInMapping(materia);
-                    const modulo = moduloReal || materia;
-
-                    // Guardar según el tipo
-                    const keyBase = `${normalizeString(nombreCompleto)}|${normalizeString(modulo)}`;
-
-                    if (tipo.includes('Apercibimento')) {
-                        apercibimientosPrevios.add(keyBase);
-
-                        // Guardar el detalle con fecha de acuse
-                        const acuseDate = parseDate(dataAcuse);
-
-                        apercibimientosPreviosDetalle.push({
-                            tipo,
-                            dataInforme,
                             dataAcuse,
-                            fechaAcuse: acuseDate,
-                            apellidos,
-                            nome,
-                            materia: modulo,
-                            nombreCompleto
-                        });
-
-                        // Guardar en mapa para acceso rápido
-                        const existing = apercibimientosPorAlumnoModulo[keyBase];
-                        if (!existing || (acuseDate && (!existing.fechaAcuse || acuseDate > existing.fechaAcuse))) {
-                            apercibimientosPorAlumnoModulo[keyBase] = {
-                                fechaAcuse: acuseDate,
-                                dataAcuse,
-                                dataInforme,
-                                tipo
-                            };
-                        }
-                    } else if (tipo.includes('Comunicación')) {
-                        comunicacionesPrevias.add(keyBase);
+                            dataInforme,
+                            tipo
+                        };
                     }
+                } else if (tipo.includes('Comunicación')) {
+                    comunicacionesPrevias.add(keyBase);
                 }
+                
             }
-
-            document.getElementById('apercPreviosCargados').textContent = lines.length - 1;
-            document.getElementById('apercPreviosInfo').style.display = 'block';
 
             showSuccess(`Cargados ${lines.length - 1} registros previos (${apercibimientosPrevios.size} apercibimientos, ${comunicacionesPrevias.size} comunicaciones).`);
 
+            /*processInput();*/
+            // Se xa hai faltas cargadas, recalcular todo
             if (faltasData.length > 0) {
                 recalcularTodo();
+                displayResumenTable();
+                console.log('Mostrando datos con apercibimientos y comunicaciones previas cargados...');
+                displayApercibimientos();
+                displayComunicaciones();
             }
         }
+
 
         function normalizeModuloName(name) {
             if (!name) return '';
@@ -794,21 +727,6 @@ window.onload = function() {
             return null;
         }
 
-        document.getElementById('faltasFileInput').addEventListener('change', function (e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    let content = e.target.result;
-                    if (content.includes('Ã±') || content.includes('Ã³')) {
-                        content = fixEncoding(content);
-                    }
-                    document.getElementById('inputText').value = content;
-                };
-                reader.readAsText(file, 'ISO-8859-1');
-            }
-        });
-
         function showTab(tabName) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
@@ -835,12 +753,8 @@ window.onload = function() {
         function processInput() {
             const input = document.getElementById('inputText').value;
             if (!input.trim()) {
-                showError('Por favor, introduce texto o selecciona un archivo de faltas.');
+                showError('Por favor, introduce o contido de Faltas Detalladas: selecciona todo (Ctrl+A), copia (Ctrl+C) e pega (Ctrl+V).');
                 return;
-            }
-
-            if (Object.keys(modulosData).length === 0) {
-                showWarning('No hay módulos cargados. Los apercibimientos no se calcularán correctamente.');
             }
 
             try {
@@ -853,26 +767,37 @@ window.onload = function() {
                 let currentStudent = '';
                 let currentStudentFull = '';
 
+                // Extraer información del curso, ciclo y grupo desde la línea 10 (índice 9)
+                curso = lines[9].substring(0, 2);                                       // Ej: "1º"
+                ciclo = lines[9].substring(3, lines[9].indexOf('-') - 1);               // Ej: "Administración de sistemas informáticos en rede"
+                grupo = lines[9].substring(lines[9].indexOf('-') + 2, lines[9].length); // Ej: "A"   
+                // Actualiza la información del ciclo en Módulos y Umbrales
+                const cicloSelector = document.getElementById('cicloSelector');
+                const index = ciclosDisponibles.findIndex(c => c.nomeCiclo === ciclo);
+                if (index !== -1) {
+                    cicloSelector.selectedIndex = index;  // Usar selectedIndex en lugar de value
+                    const changeEvent = new Event('change');
+                    cicloSelector.dispatchEvent(changeEvent);
+                }                        
+
+                // Recorre todas las líneas para extraer los datos de faltas
+                lineaPagina = 0;
                 for (let i = 0; i < lines.length; i++) {
-                    let line = lines[i].trimRight();
-
-                    if (line === '') continue;
-
-                    if (line.includes('Centro Educativo') ||
-                        line.includes('CdCentro') ||
-                        line.includes('Dirección Centro') ||
-                        line.includes('Teléfono') ||
-                        line.includes('email') ||
-                        line.includes('web') ||
-                        line.includes('Lista detallada') ||
-                        line.includes('Graos D:') ||
-                        line.includes('1º Desenvolvemento') ||
-                        line.includes('Dende:') ||
-                        line.includes('Apelidos e nome') ||
-                        line.includes('Páxina') ||
-                        line.match(/^Data \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/)) {
+                    // Salta las líneas de cabecera (asumiendo que las primeras 11 líneas son de información general)
+                    if (lineaPagina < 12) {
+                        lineaPagina++;
                         continue;
                     }
+                    
+                    let line = lines[i].trimRight();
+                    
+                    // Reiniciar el contador de líneas al detectar el pie de página)
+                    if (line.startsWith('Data')) {
+                        lineaPagina = 0; // Reiniciar contador de líneas para cada página
+                        continue;
+                    }                    
+
+                    if (line === '') continue;
 
                     const studentMatch = line.match(/^(.+?, [^,]+?)(?=\s+\d{2}\/\d{2}\/\d{4})/);
 
@@ -903,29 +828,30 @@ window.onload = function() {
                 }
 
                 if (faltasData.length === 0) {
-                    showError('No se pudieron extraer datos. Verifica que el formato sea correcto.');
+                    showError('Non se puideron extraer datos. Verifica que o formato sexa correcto.');
                     return;
                 }
 
-                buildResumenMatrix();
-                recalcularTodo();
+
+
+
 
                 document.getElementById('stats').style.display = 'block';
                 document.getElementById('totalFaltas').textContent = faltasData.length;
                 document.getElementById('totalAlumnos').textContent = alumnos.size;
                 document.getElementById('totalModulos').textContent = modulos.size;
 
+                buildResumenMatrix();
                 displayFaltasDetalladas();
-                displayResumenTable();
-                displayApercibimientos();
-                displayComunicaciones();
+
+                processApercibimentos()
 
                 document.getElementById('downloadBtn').disabled = false;
                 document.getElementById('downloadResumenBtn').disabled = false;
                 document.getElementById('printBtn').disabled = false;
 
                 // Ocultar controles
-                document.getElementById('controlsSection').classList.add('hidden');
+                //document.getElementById('controlsSection').classList.add('hidden');
 
             } catch (error) {
                 showError('Error al procesar: ' + error.message);
@@ -933,36 +859,35 @@ window.onload = function() {
             }
         }
 
+        function processApercibimentos() {
+            recalcularTodo();
+
+            displayResumenTable();
+            displayApercibimientos();
+            displayComunicaciones();
+        }
+
+        function buildResumenMatrix() {
+            matrizResumen = {};
+            const modulosArray = Array.from(modulos).sort();
+
+            alumnos.forEach(alumno => {
+                matrizResumen[alumno] = {};
+                modulosArray.forEach(m => matrizResumen[alumno][m] = 0);
+            });
+
+            faltasData.forEach(falta => {
+                if (matrizResumen[falta.alumno] && falta.modulo) {
+                    matrizResumen[falta.alumno][falta.modulo]++;
+                }
+            });
+        }
+
         function recalcularTodo() {
             calcularApercibimientosPendientes();
             calcularComunicacionesPendientes();
-
-            // Actualizar botones (manteniéndolos siempre visibles si hay pendientes)
-            actualizarBotones();
         }
 
-        function actualizarBotones() {
-            const apercContainer = document.getElementById('apercibimientosButtonContainer');
-            if (apercibimientosPendientes.length > 0) {
-                apercContainer.innerHTML = `<button class="action-button danger" onclick="guardarApercibimientosConFecha()">
-                    💾 Guardar apercibimientos pendientes 
-                    <span class="counter-badge">${apercibimientosPendientes.length}</span>
-                </button>`;
-            } else {
-                apercContainer.innerHTML = '';
-            }
-
-            const comunicContainer = document.getElementById('comunicacionesButtonContainer');
-            const comunicacionesNuevas = comunicacionesPendientes.filter(c => !c.yaEnviada);
-            if (comunicacionesNuevas.length > 0) {
-                comunicContainer.innerHTML = `<button class="action-button warning" onclick="guardarComunicacionesConFecha()">
-                    💾 Guardar comunicaciones pendientes 
-                    <span class="counter-badge">${comunicacionesNuevas.length}</span>
-                </button>`;
-            } else {
-                comunicContainer.innerHTML = '';
-            }
-        }
 
         function processFaltaLineWithContext(student, line, currentIndex) {
             // Extraer fecha
@@ -1085,21 +1010,6 @@ window.onload = function() {
             return lineIndex;
         }
 
-        function buildResumenMatrix() {
-            matrizResumen = {};
-            const modulosArray = Array.from(modulos).sort();
-
-            alumnos.forEach(alumno => {
-                matrizResumen[alumno] = {};
-                modulosArray.forEach(m => matrizResumen[alumno][m] = 0);
-            });
-
-            faltasData.forEach(falta => {
-                if (matrizResumen[falta.alumno] && falta.modulo) {
-                    matrizResumen[falta.alumno][falta.modulo]++;
-                }
-            });
-        }
 
         function calcularApercibimientosPendientes() {
             apercibimientosPendientes = [];
@@ -1265,13 +1175,14 @@ window.onload = function() {
                 body += row;
             });
 
-            document.getElementById('tableBody').innerHTML = body;
 
             // Inicializar DataTable
             if ($.fn.DataTable) {
                 if ($.fn.DataTable.isDataTable('#resumenTable')) {
                     $('#resumenTable').DataTable().destroy();
                 }
+                document.getElementById('tableBody').innerHTML = body;
+
                 $('#resumenTable').DataTable({
                     language: datatableSpanish,
                     pageLength: 100,
@@ -1341,8 +1252,12 @@ window.onload = function() {
             // Inicializar DataTable
             if ($.fn.DataTable) {
                 if ($.fn.DataTable.isDataTable('#apercibimientosTable')) {
+                    console.log('Destruyendo DataTable de apercibimientos para reinicializar...');
                     $('#apercibimientosTable').DataTable().destroy();
                 }
+
+                document.getElementById('apercibimientosBody').innerHTML = body;
+
                 $('#apercibimientosTable').DataTable({
                     language: datatableSpanish,
                     pageLength: 100,
@@ -1384,6 +1299,9 @@ window.onload = function() {
                 if ($.fn.DataTable.isDataTable('#comunicacionesTable')) {
                     $('#comunicacionesTable').DataTable().destroy();
                 }
+
+                document.getElementById('comunicacionesBody').innerHTML = body;
+
                 $('#comunicacionesTable').DataTable({
                     language: datatableSpanish,
                     pageLength: 100,
@@ -1393,186 +1311,63 @@ window.onload = function() {
             }
         }
 
-        function guardarApercibimientosConFecha() {
-            if (apercibimientosPendientes.length === 0) {
-                showWarning('No hay apercibimientos pendientes para guardar.');
-                return;
-            }
 
-            const fechaActual = getCurrentDateFormatted();
-            const fechaFilename = getCurrentDateForFilename();
-            let nuevosRegistros = [];
+function guardarApercibimientos() {
+    const fechaActual = getCurrentDateFormatted();
+    const fechaFilename = getCurrentDateForFilename();
 
-            apercibimientosPendientes.forEach(a => {
-                // Obtener el nombre completo del alumno
-                const nombreCompleto = a.alumno;
+    let nuevosRegistros = [];
 
-                // Dividir en apellidos y nombre (formato: "Apellidos, Nombre")
-                const parts = nombreCompleto.split(',');
-                let apellidos = '';
-                let nome = '';
+    apercibimientosPendientes.forEach(a => {
+        nuevosRegistros.push(crearRegistro(a, 'ApercibimentoPD', fechaActual));
+    });
 
-                if (parts.length === 2) {
-                    apellidos = parts[0].trim();
-                    nome = parts[1].trim();
-                } else {
-                    // Si no hay coma, tratar todo como apellidos
-                    apellidos = nombreCompleto;
-                    nome = '';
-                }
+    const comunicacionesNuevas = comunicacionesPendientes.filter(c => !c.yaEnviada);
+    comunicacionesNuevas.forEach(c => {
+        nuevosRegistros.push(crearRegistro(c, 'ComunicaciónPD', fechaActual));
+    });
 
-                // Normalizar capitalización (primera letra mayúscula, resto minúscula para cada palabra)
-                apellidos = capitalizarPalabras(apellidos);
-                nome = capitalizarPalabras(nome);
+    showSuccess(`Se han añadido ${apercibimientosPendientes.length} apercibimientos y ${comunicacionesNuevas.length} comunicaciones PD . Archivo guardado como ${fechaFilename}_DATOS_Apercibimentos_completo.csv`);
 
-                nuevosRegistros.push({
-                    tipo: 'ApercibimentoPD',
-                    dataInforme: fechaActual,
-                    dataAcuse: fechaActual,
-                    apellidos,
-                    nome,
-                    materia: a.modulo
-                });
-            });
+    // Generar CSV completo con el nuevo formato
+    let csvCompleto = contenidoOriginalApercibimientos;
+    // Asegurar que termina con salto de línea
+    if (!csvCompleto.endsWith('\n')) {
+        csvCompleto += '\n';
+    }
+    // Añadir nuevos registros en el nuevo formato
+    nuevosRegistros.forEach(r => {
+        csvCompleto += `${r.tipo},${r.dataInforme},${r.dataAcuse},${r.apellidos},${r.nome},${r.materia}\n`;
+    });
 
-            // Generar CSV completo con el nuevo formato
-            let csvCompleto = contenidoOriginalApercibimientos;
+    downloadCSVFile(csvCompleto, `${fechaFilename}_DATOS_Apercibimentos_completo.csv`);
+}
 
-            // Verificar si la cabecera tiene el formato antiguo o nuevo
-            const tieneCabeceraAntigua = csvCompleto.includes('1º APELIDO') && csvCompleto.includes('2º APELIDO');
 
-            // Si es formato antiguo, convertir la cabecera al nuevo formato
-            if (tieneCabeceraAntigua) {
-                // Reemplazar la cabecera
-                csvCompleto = csvCompleto.replace(
-                    /TIPO INFORME,DATA INFORME,DATA ACUSE,1º APELIDO,2º APELIDO,NOME,MATERIA/,
-                    'TIPO INFORME,DATA INFORME,DATA ACUSE,APELIDOS,NOME,MATERIA'
-                );
-            }
+function crearRegistro(item, tipo, fechaActual) {
+    const nombreCompleto = item.alumno;
+    const parts = nombreCompleto.split(',');
+    let apellidos = '';
+    let nome = '';
+    
+    if (parts.length === 2) {
+        apellidos = capitalizarPalabras(parts[0].trim());
+        nome = capitalizarPalabras(parts[1].trim());
+    } else {
+        apellidos = capitalizarPalabras(nombreCompleto);
+        nome = '';
+    }
+    
+    return {
+        tipo: tipo,
+        dataInforme: fechaActual,
+        dataAcuse: '',
+        apellidos: apellidos,
+        nome: nome,
+        materia: item.modulo
+    };
+}
 
-            // Asegurar que termina con salto de línea
-            if (!csvCompleto.endsWith('\n')) {
-                csvCompleto += '\n';
-            }
-
-            // Añadir nuevos registros en el nuevo formato
-            nuevosRegistros.forEach(r => {
-                csvCompleto += `${r.tipo},${r.dataInforme},${r.dataAcuse},${r.apellidos},${r.nome},${r.materia}\n`;
-            });
-
-            downloadCSVFile(csvCompleto, `${fechaFilename}_DATOS_Apercibimentos_completo.csv`);
-
-            // Actualizar datos en memoria
-            nuevosRegistros.forEach(r => {
-                const nombreCompleto = `${r.apellidos}, ${r.nome}`;
-                const key = `${normalizeString(nombreCompleto)}|${normalizeString(r.materia)}`;
-                apercibimientosPrevios.add(key);
-                apercibimientosPorAlumnoModulo[key] = {
-                    fechaAcuse: parseDate(r.dataAcuse),
-                    dataAcuse: r.dataAcuse,
-                    dataInforme: r.dataInforme,
-                    tipo: r.tipo
-                };
-            });
-
-            contenidoOriginalApercibimientos = csvCompleto;
-
-            // Recalcular todo
-            recalcularTodo();
-            displayResumenTable();
-            displayApercibimientos();
-            displayComunicaciones();
-
-            showSuccess(`Se han añadido ${nuevosRegistros.length} apercibimientos. Archivo guardado como ${fechaFilename}_DATOS_Apercibimentos_completo.csv`);
-        }
-
-        function guardarComunicacionesConFecha() {
-            const comunicacionesNuevas = comunicacionesPendientes.filter(c => !c.yaEnviada);
-
-            if (comunicacionesNuevas.length === 0) {
-                showWarning('No hay comunicaciones nuevas para guardar.');
-                return;
-            }
-
-            const fechaActual = getCurrentDateFormatted();
-            const fechaFilename = getCurrentDateForFilename();
-            let nuevosRegistros = [];
-
-            comunicacionesNuevas.forEach(c => {
-                // Obtener el nombre completo del alumno
-                const nombreCompleto = c.alumno;
-
-                // Dividir en apellidos y nombre (formato: "Apellidos, Nombre")
-                const parts = nombreCompleto.split(',');
-                let apellidos = '';
-                let nome = '';
-
-                if (parts.length === 2) {
-                    apellidos = parts[0].trim();
-                    nome = parts[1].trim();
-                } else {
-                    // Si no hay coma, tratar todo como apellidos
-                    apellidos = nombreCompleto;
-                    nome = '';
-                }
-
-                // Normalizar capitalización
-                apellidos = capitalizarPalabras(apellidos);
-                nome = capitalizarPalabras(nome);
-
-                nuevosRegistros.push({
-                    tipo: 'ComunicaciónPD',
-                    dataInforme: fechaActual,
-                    dataAcuse: fechaActual,
-                    apellidos,
-                    nome,
-                    materia: c.modulo
-                });
-            });
-
-            // Generar CSV completo con el nuevo formato
-            let csvCompleto = contenidoOriginalApercibimientos;
-
-            // Verificar si la cabecera tiene el formato antiguo o nuevo
-            const tieneCabeceraAntigua = csvCompleto.includes('1º APELIDO') && csvCompleto.includes('2º APELIDO');
-
-            // Si es formato antiguo, convertir la cabecera al nuevo formato
-            if (tieneCabeceraAntigua) {
-                csvCompleto = csvCompleto.replace(
-                    /TIPO INFORME,DATA INFORME,DATA ACUSE,1º APELIDO,2º APELIDO,NOME,MATERIA/,
-                    'TIPO INFORME,DATA INFORME,DATA ACUSE,APELIDOS,NOME,MATERIA'
-                );
-            }
-
-            // Asegurar que termina con salto de línea
-            if (!csvCompleto.endsWith('\n')) {
-                csvCompleto += '\n';
-            }
-
-            // Añadir nuevos registros en el nuevo formato
-            nuevosRegistros.forEach(r => {
-                csvCompleto += `${r.tipo},${r.dataInforme},${r.dataAcuse},${r.apellidos},${r.nome},${r.materia}\n`;
-            });
-
-            downloadCSVFile(csvCompleto, `${fechaFilename}_DATOS_Apercibimentos_completo.csv`);
-
-            // Actualizar datos en memoria
-            nuevosRegistros.forEach(r => {
-                const nombreCompleto = `${r.apellidos}, ${r.nome}`;
-                const key = `${normalizeString(nombreCompleto)}|${normalizeString(r.materia)}`;
-                comunicacionesPrevias.add(key);
-            });
-
-            contenidoOriginalApercibimientos = csvCompleto;
-
-            // Recalcular todo
-            recalcularTodo();
-            displayResumenTable();
-            displayApercibimientos();
-            displayComunicaciones();
-
-            showSuccess(`Se han añadido ${nuevosRegistros.length} comunicaciones. Archivo guardado como ${fechaFilename}_DATOS_Apercibimentos_completo.csv`);
-        }
 
         function capitalizarPalabras(texto) {
             if (!texto) return texto;

@@ -33,4 +33,20 @@ FALTAS
 
 
 PRUEBAS:
-- 2026/04/21 - Parsea correctamente las faltas detalaldas de ASIR1
+- 2026/04/21 - Parsea correctamente las faltas detalladas de ASIR1
+- NO GENERA BIEN LOS APERCIBIMIENTOS: Hay que tener cargados los datos del ciclo...
+
+
+
+2026/04/28
+MELLORAS A REALIZAR
+- Desplegable de Módulos y Umbrales
+- Unificar botón de gardar apercibimentos e comunicacións
+- Xerar novos apercibimentos sen data de acuse de recibo
+- Correxido Problema coa cedilla?? (Mendonça)
+- Despois de engadir faltas detalladas.. ao engadir apercibimientos revisar todo
+
+
+
+PROXIMO
+- Parsear faltas: ocultar alumnado de baixa?
