@@ -31,7 +31,6 @@ FALTAS
 * Permitir introducir el fichero de apercibimientos y recalcular la tabla resumen y las otras solapas.
 
 
-
 PRUEBAS:
 - 2026/04/21 - Parsea correctamente las faltas detalladas de ASIR1
 - NO GENERA BIEN LOS APERCIBIMIENTOS: Hay que tener cargados los datos del ciclo...
@@ -50,3 +49,6 @@ MELLORAS A REALIZAR
 
 PROXIMO
 - Parsear faltas: ocultar alumnado de baixa?
+- Permitir Editar data acuse recibo
+- Gardar como JSON
+- Axuda paso a paso
