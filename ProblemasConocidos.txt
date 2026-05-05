@@ -45,10 +45,16 @@ MELLORAS A REALIZAR
 - Correxido Problema coa cedilla?? (Mendonça)
 - Despois de engadir faltas detalladas.. ao engadir apercibimientos revisar todo
 
-
+2026/05/05
+- Añadir información de ciclo, curso y grupo al fichero de Apercibimientos
+- Correxido: Ordenar por Fechas correctamente
 
 PROXIMO
 - Parsear faltas: ocultar alumnado de baixa?
 - Permitir Editar data acuse recibo
 - Gardar como JSON
 - Axuda paso a paso
+
+
+Apercibimientos: 
+- Para modificar: ordenar por defecto mostrando primero los registros que tienen el acuse de recibo vacío

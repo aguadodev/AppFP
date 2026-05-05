@@ -30,7 +30,7 @@
 
                 <label><strong>2. Arquivo de apercibimentos e comunicacións PD previas (opcional):</strong></label>
                 <input type="file" id="apercibimientosPreviosInput" accept=".csv"
-                    onchange="loadApercibimientosPreviosFile(event)">
+                onclick="this.value=null" onchange="loadApercibimientosPreviosFile(event)">
             </div>         
         </div>
 
@@ -101,7 +101,6 @@
                             <th>Fecha</th>
                             <th>Hora</th>
                             <th>Módulo</th>
-                            <th style="display: none;">FechaOrden</th>
                         </tr>
                     </thead>
                     <tbody id="faltasDetalladasBody">
@@ -184,6 +183,25 @@
         </div>
     </div>
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     <script>
         // Configuración de DataTables en español (local)
         const datatableSpanish = {
@@ -212,6 +230,11 @@
         };
 
         // Variables globales
+        let curso = null;
+        let ciclo = null;
+        let grupo = null;
+
+
         let faltasData = [];
         let alumnos = new Set();
         let alumnosDetalle = {};
@@ -250,40 +273,68 @@
         const SESION_MINUTOS = 50;
 
 
+        // **************************************************************************************************
+        // *** Definir el tipo de ordenamiento personalizado para fechas en DataTables (formato dd/mm/yyyy)
+        // **************************************************************************************************
+
+        jQuery.fn.dataTableExt.oSort['fecha-ddmmyyyy-asc'] = function(a, b) {
+            // Convertir dd/mm/aaaa a timestamp o a YYYYMMDD para comparar
+            let da = a.split('/');
+            let db = b.split('/');
+            
+            let fechaA = new Date(da[2], da[1] - 1, da[0]);
+            let fechaB = new Date(db[2], db[1] - 1, db[0]);
+            
+            return ((fechaA < fechaB) ? -1 : ((fechaA > fechaB) ? 1 : 0));
+        };
+
+        jQuery.fn.dataTableExt.oSort['fecha-ddmmyyyy-desc'] = function(a, b) {
+            let da = a.split('/');
+            let db = b.split('/');
+            
+            let fechaA = new Date(da[2], da[1] - 1, da[0]);
+            let fechaB = new Date(db[2], db[1] - 1, db[0]);
+            
+            return ((fechaA < fechaB) ? 1 : ((fechaA > fechaB) ? -1 : 0));
+        };  
+
+
+
+
+
 // Modificar o window.onload existente
 window.onload = function() {
     cargarCiclos(); // Cargar os ciclos en lugar dos módulos por defecto
 };        
 
 
+// Muestra la solapa seleccionada
+function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+
+            if (tabName === 'modulos') {
+                document.querySelector('.tab').classList.add('active');
+                document.getElementById('modulosTab').classList.add('active');
+            } else if (tabName === 'faltasDetalladas') {
+                document.querySelectorAll('.tab')[1].classList.add('active');
+                document.getElementById('faltasDetalladasTab').classList.add('active');
+            } else if (tabName === 'resumen') {
+                document.querySelectorAll('.tab')[2].classList.add('active');
+                document.getElementById('resumenTab').classList.add('active');
+            } else if (tabName === 'apercibimientos') {
+                document.querySelectorAll('.tab')[3].classList.add('active');
+                document.getElementById('apercibimientosTab').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab')[4].classList.add('active');
+                document.getElementById('comunicacionesTab').classList.add('active');
+            }
+        }
 
 
-document.getElementById('inputText').addEventListener('input', processInput);
-
-
-
-
-
-
-
-
-
-
-function toggleControlsSection() {
-    const section = document.getElementById('controlsSection');
-    const btn = document.getElementById('toggleControlsBtn');
-    if (section.style.display === 'none') {
-        section.style.display = 'block';
-        btn.innerHTML = '📁 Ocultar Controles';
-    } else {
-        section.style.display = 'none';
-        btn.innerHTML = '📁 Mostrar Controles';
-    }
-}
-
-
-
-
+// ******************************************************************
+// *** CARGAR DATOS DE CICLOS DESDE FICHEIRO EXTERNO (datosCiclos.js)
+// ******************************************************************
 
 // Cargar os datos dos ciclos desde o ficheiro externo
 function cargarCiclos() {
@@ -498,7 +549,25 @@ function displayModulosTable() {
 
 
 
+document.getElementById('inputText').addEventListener('input', processInput);
 
+
+function toggleControlsSection() {
+    const section = document.getElementById('controlsSection');
+    const btn = document.getElementById('toggleControlsBtn');
+    if (section.style.display === 'none') {
+        section.style.display = 'block';
+        btn.innerHTML = '📁 Ocultar Controles';
+    } else {
+        section.style.display = 'none';
+        btn.innerHTML = '📁 Mostrar Controles';
+    }
+}
+
+
+// ******************************************************************
+// *** ARREGLAR CODIFICACIÓN Y PARSEAR  DATOS
+// ******************************************************************
 
         function fixEncoding(text) {
             return text
@@ -564,6 +633,10 @@ function displayModulosTable() {
             return `${year}-${month}-${day}`;
         }
 
+// ******************************************************************
+// *** CARGAR APERCIBIMIENTOS PREVIOS DESDE CSV
+// ******************************************************************
+
         function loadApercibimientosPreviosFile(event) {
             const file = event.target.files[0];
             if (file) {
@@ -589,9 +662,26 @@ function displayModulosTable() {
             apercibimientosPorAlumnoModulo = {};
 
             // Saltar cabecera
+            // @TODO: Parsear CABECERA DE CICLO; CURSO Y GRUPO?
+            // header = Cabecera de columnas: TIPO INFORME,DATA INFORME,DATA ACUSE,APELIDOS,NOME,MATERIA
             const header = lines[0].trim();
+            let lineaInicioDatos = 1;
 
-            for (let i = 1; i < lines.length; i++) {
+            // Si existe una línea de metadatos antes de la cabecera, detectarla y ajustarla
+            if (header.split(',')[0] !== 'TIPO INFORME') {
+                curso = header.split(',')[0] || '';
+                ciclo = header.split(',')[1] || ''; 
+                grupo = header.split(',')[2] || '';
+                console.log(`Detectada línea de metadatos: Curso="${curso}", Ciclo="${ciclo}", Grupo="${grupo}"`);
+
+                // Actualiza la información del ciclo en Módulos y Umbrales                
+                actualizaModulos(ciclo);                
+                
+                lineaInicioDatos = 2;
+            }
+            
+            // Procesar cada línea de datos
+            for (let i = lineaInicioDatos; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (line === '') continue;
 
@@ -663,7 +753,7 @@ function displayModulosTable() {
                 
             }
 
-            showSuccess(`Cargados ${lines.length - 1} registros previos (${apercibimientosPrevios.size} apercibimientos, ${comunicacionesPrevias.size} comunicaciones).`);
+            showSuccess(`Cargados ${lines.length - lineaInicioDatos} registros previos (${apercibimientosPrevios.size} apercibimientos, ${comunicacionesPrevias.size} comunicaciones).`);
 
             /*processInput();*/
             // Se xa hai faltas cargadas, recalcular todo
@@ -726,27 +816,19 @@ function displayModulosTable() {
             return null;
         }
 
-        function showTab(tabName) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
 
-            if (tabName === 'modulos') {
-                document.querySelector('.tab').classList.add('active');
-                document.getElementById('modulosTab').classList.add('active');
-            } else if (tabName === 'faltasDetalladas') {
-                document.querySelectorAll('.tab')[1].classList.add('active');
-                document.getElementById('faltasDetalladasTab').classList.add('active');
-            } else if (tabName === 'resumen') {
-                document.querySelectorAll('.tab')[2].classList.add('active');
-                document.getElementById('resumenTab').classList.add('active');
-            } else if (tabName === 'apercibimientos') {
-                document.querySelectorAll('.tab')[3].classList.add('active');
-                document.getElementById('apercibimientosTab').classList.add('active');
-            } else {
-                document.querySelectorAll('.tab')[4].classList.add('active');
-                document.getElementById('comunicacionesTab').classList.add('active');
-            }
-        }
+
+        function actualizaModulos(ciclo) {
+            // Actualiza la información del ciclo en Módulos y Umbrales
+            const cicloSelector = document.getElementById('cicloSelector');
+            const index = ciclosDisponibles.findIndex(c => c.nomeCiclo === ciclo);
+            if (index !== -1) {
+                cicloSelector.selectedIndex = index;  // Usar selectedIndex en lugar de value
+                const changeEvent = new Event('change');
+                cicloSelector.dispatchEvent(changeEvent);
+            } 
+        }                
+
 
 
         function processInput() {
@@ -769,15 +851,11 @@ function displayModulosTable() {
                 // Extraer información del curso, ciclo y grupo desde la línea 10 (índice 9)
                 curso = lines[9].substring(0, 2);                                       // Ej: "1º"
                 ciclo = lines[9].substring(3, lines[9].indexOf('-') - 1);               // Ej: "Administración de sistemas informáticos en rede"
-                grupo = lines[9].substring(lines[9].indexOf('-') + 2, lines[9].length); // Ej: "A"   
-                // Actualiza la información del ciclo en Módulos y Umbrales
-                const cicloSelector = document.getElementById('cicloSelector');
-                const index = ciclosDisponibles.findIndex(c => c.nomeCiclo === ciclo);
-                if (index !== -1) {
-                    cicloSelector.selectedIndex = index;  // Usar selectedIndex en lugar de value
-                    const changeEvent = new Event('change');
-                    cicloSelector.dispatchEvent(changeEvent);
-                }                        
+                grupo = lines[9].substring(lines[9].indexOf('-') + 2, lines[9].length); // Ej: "A"  
+
+                // Actualiza la información del ciclo en Módulos y Umbrales                
+                actualizaModulos(ciclo);
+                 
 
                 // Recorre todas las líneas para extraer los datos de faltas
                 lineaPagina = 0;
@@ -1126,7 +1204,6 @@ function displayModulosTable() {
                     <td>${f.fecha}</td>
                     <td>${f.hora}</td>
                     <td>${f.modulo}</td>
-                    <td style="display: none;">${fechaSort}</td>
                 </tr>`;
             });
 
@@ -1143,7 +1220,7 @@ function displayModulosTable() {
                     lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
                     order: [[2, 'desc']], // Ordenar por fecha descendente
                     columnDefs: [
-                        { targets: 5, visible: false } // Ocultar columna de ordenamiento
+                        {targets: 2, type: 'fecha-ddmmyyyy'}                        
                     ]
                 });
             }
@@ -1266,6 +1343,11 @@ function displayModulosTable() {
             }
         }
 
+
+
+
+
+
         function displayComunicaciones() {
             if (comunicacionesPendientes.length === 0) {
                 document.getElementById('comunicacionesBody').innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No hay comunicaciones pendientes.</td></tr>';
@@ -1284,6 +1366,8 @@ function displayModulosTable() {
                     <td><strong>${c.alumno}</strong></td>
                     <td>${c.modulo}</td>
                     <td style="text-align: center;">${c.fechaUltimoAperc}</td>
+
+
                     <td style="text-align: center;">${c.faltasDesdeAcuse}</td>
                     <td style="text-align: center;">${c.porcentaje}%</td>
                     <td style="text-align: center;">${c.umbral4}</td>
@@ -1300,9 +1384,16 @@ function displayModulosTable() {
                 }
 
                 document.getElementById('comunicacionesBody').innerHTML = body;
+    
 
                 $('#comunicacionesTable').DataTable({
                     language: datatableSpanish,
+                    columnDefs: [
+                        {
+                            targets: 2, // La columna de fechaUltimoAperc (índice 2)
+                            type: 'fecha-ddmmyyyy'
+                        }
+                    ],                    
                     pageLength: 100,
                     lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
                     order: [[1, 'asc'], [3, 'desc']]
