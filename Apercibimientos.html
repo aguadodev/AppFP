@@ -130,7 +130,24 @@
             const lineas = text.split('\n').filter(l => l.trim());
             cabeceras = lineas[0].split(',').map(x => x.trim());
 
-            datosActuales = lineas.slice(1).map(l => {
+            let lineaInicioDatos = 1;
+
+            // Si existe una línea de metadatos antes de la cabecera, detectarla y ajustarla
+            if (lineas[0].split(',')[0] !== 'TIPO INFORME') {
+                curso = lineas[0].split(',')[0] || '';
+                ciclo = lineas[0].split(',')[1] || ''; 
+                grupo = lineas[0].split(',')[2] || '';
+                console.log(`Detectada línea de metadatos: Curso="${curso}", Ciclo="${ciclo}", Grupo="${grupo}"`);
+
+                // Muestra la información del ciclo en Módulos y Umbrales                
+                // ...               
+
+                cabeceras = lineas[1].split(',').map(x => x.trim());
+                lineaInicioDatos = 2;
+            }
+
+
+            datosActuales = lineas.slice(lineaInicioDatos).map(l => {
                 const vals = l.split(',');
                 let obj = {};
                 cabeceras.forEach((c, i) => obj[c] = limpiarValor(vals[i] || ''));

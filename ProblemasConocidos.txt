@@ -49,9 +49,11 @@ MELLORAS A REALIZAR
 - Añadir información de ciclo, curso y grupo al fichero de Apercibimientos
 - Correxido: Ordenar por Fechas correctamente
 
+
 PROXIMO
 - Parsear faltas: ocultar alumnado de baixa?
-- Permitir Editar data acuse recibo
+- Permitir Editar data acuse recibo como no arquivo "Apercibimientos.html"
+- "Apercibimientos.html" -> Lee CSV con cabecera de ciclo o sin ella, pero sólo guarda sin cabecera...
 - Gardar como JSON
 - Axuda paso a paso
 
