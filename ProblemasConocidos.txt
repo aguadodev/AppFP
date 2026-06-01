@@ -50,7 +50,18 @@ MELLORAS A REALIZAR
 - Correxido: Ordenar por Fechas correctamente
 
 
+
+2026/06/01 - INFORME DE AVALIACIÓNv3
+- Corrección para contabilizar "PD" como suspensos.
+- Axustes de usabilidade e presentación
+- Xera acta de avaliación
+
+
+
+
+
 PROXIMO
+- INFORME DE AVALIACIÓN: Probar para outros grupos, para avaliación Final, para informes individualizados.
 - Parsear faltas: ocultar alumnado de baixa?
 - Permitir Editar data acuse recibo como no arquivo "Apercibimientos.html"
 - "Apercibimientos.html" -> Lee CSV con cabecera de ciclo o sin ella, pero sólo guarda sin cabecera...
@@ -60,3 +71,6 @@ PROXIMO
 
 Apercibimientos: 
 - Para modificar: ordenar por defecto mostrando primero los registros que tienen el acuse de recibo vacío
+
+
+

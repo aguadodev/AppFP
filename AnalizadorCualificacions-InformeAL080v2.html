@@ -414,15 +414,41 @@
                         datosPorAlumno[doi] = { nomeCompleto, suspensos: 0, avaliados: 0 };
                     }
 
+
+                    // CONTAR Avaliados, Aprobados, Suspensos
                     if (cualificacionStr.toLowerCase() !== 'sen cualificar' && cualificacionStr !== '') {
-                        const nota = parseInt(cualificacionStr, 10);
-                        if (!isNaN(nota)) {
+                        let notaValida = false;
+                        let nota = null;
+                        let isSuspenso = false;
+                        
+                        if (cualificacionStr.toUpperCase() === 'PD') {
+                            notaValida = true;
+                            isSuspenso = true; // PD se considera suspenso
+                        } else {
+                            nota = parseInt(cualificacionStr, 10);
+                            if (!isNaN(nota)) {
+                                notaValida = true;
+                                isSuspenso = nota < 5;
+                            }
+                        }
+                        
+                        if (notaValida) {
                             estadisticasModulos[materia].avaliados++;
-                            nota >= 5 ? estadisticasModulos[materia].aprobados++ : estadisticasModulos[materia].suspensos++;
+                            
+                            if (!isSuspenso) {
+                                estadisticasModulos[materia].aprobados++;
+                            } else {
+                                estadisticasModulos[materia].suspensos++;
+                            }
+                            
                             datosPorAlumno[doi].avaliados++;
-                            if (nota < 5) datosPorAlumno[doi].suspensos++;
+                            
+                            if (isSuspenso) {
+                                datosPorAlumno[doi].suspensos++;
+                            }
                         }
                     }
+
                 }
 
                 // Calcular estatísticas de suspensos e listaxes

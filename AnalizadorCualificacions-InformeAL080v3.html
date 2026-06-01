@@ -252,14 +252,33 @@
             <p>Analiza o CSV de cualificacións e xera a acta de avaliación co formato oficial</p>
         </div>
 
-        <div class="main-content">
-            <div class="file-input-area">
-                <input type="file" id="csvFileInput" accept=".csv">
-                <button class="btn btn-primary" id="analizarBtn" disabled>🔍 Analizar Ficheiro</button>
-                <button class="btn btn-success" id="exportarActaBtn" disabled>📄 Xerar Acta ODT</button>
+        <div class="main-content">     
+            <div id="acta-file">
+                <div id="mensaxeInicial">
+                    <p>📁 Selecciona un ficheiro CSV do informe "AL080-Listaxe cualificacións" para comezar...</p>
+                </div>                  
+                <div class="file-input-area">                  
+                    <input type="file" id="csvFileInput" accept=".csv">                    
+                </div>
             </div>
 
-            <div class="row">
+            <div id="informesContainer" style="display: none;">
+                <div class="tab-container">
+                    <button class="tab-btn active" data-tab="informeModulos">Resumo Módulos</button>
+                    <button class="tab-btn" data-tab="informeAlumnado">Resumo Alumnado</button>
+                </div>
+                <div class="tab-content-wrapper">
+                    <div id="informeModulos" class="tab-content active"></div>
+                    <div id="informeAlumnado" class="tab-content"></div>
+                </div>
+            </div>
+
+            <hr>
+
+            <div id="mensaxeInicial">
+                <p>📁 Cubre a información básica da acta da reunión... despois poderás editala e imprimila.</p>
+            </div>
+            <div id="acta-info" class="row">
                 <div class="form-group">
                     <label>📅 Data da Acta</label>
                     <input type="date" id="dataActa" value="">
@@ -276,6 +295,8 @@
                     <label>👥 Grupo</label>
                     <input type="text" id="grupoActa" value="DAM1">
                 </div>
+                <button class="btn btn-success" id="exportarActaBtn" disabled>📄 Xerar Acta ODT</button>
+
                 <div class="form-group full-width">
                     <label>📝 Valoración Xeral do Grupo</label>
                     <textarea id="valoracionXeral" placeholder="Engade aquí a valoración xeral do grupo..."></textarea>
@@ -288,20 +309,6 @@
                     <label>💬 Outras Observacións</label>
                     <textarea id="observacions" placeholder="Engade aquí outras observacións..."></textarea>
                 </div>
-            </div>
-
-            <div id="informesContainer" style="display: none;">
-                <div class="tab-container">
-                    <button class="tab-btn active" data-tab="informeModulos">Resumo Módulos</button>
-                    <button class="tab-btn" data-tab="informeAlumnado">Resumo Alumnado</button>
-                </div>
-                <div class="tab-content-wrapper">
-                    <div id="informeModulos" class="tab-content active"></div>
-                    <div id="informeAlumnado" class="tab-content"></div>
-                </div>
-            </div>
-            <div id="mensaxeInicial">
-                <p>📁 Selecciona un ficheiro CSV e fai clic en "Analizar Ficheiro" para comezar...</p>
             </div>
         </div>
     </div>
@@ -330,24 +337,23 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const csvFileInput = document.getElementById('csvFileInput');
-            const analizarBtn = document.getElementById('analizarBtn');
             const exportarActaBtn = document.getElementById('exportarActaBtn');
             const informesContainer = document.getElementById('informesContainer');
             const mensaxeInicial = document.getElementById('mensaxeInicial');
             const tabButtons = document.querySelectorAll('.tab-btn');
             const tabContents = document.querySelectorAll('.tab-content');
 
-            csvFileInput.addEventListener('change', () => {
-                analizarBtn.disabled = csvFileInput.files.length === 0;
-            });
-
-            analizarBtn.addEventListener('click', () => {
-                const file = csvFileInput.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (evento) => procesarContidoCSV(evento.target.result);
-                reader.onerror = () => mensaxeInicial.innerHTML = `<p style="color:red;"><b>Erro:</b> Non se puido ler o ficheiro.</p>`;
-                reader.readAsText(file, 'UTF-8');
+            // Análise automática cando se selecciona un ficheiro
+            csvFileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    // Analizar automaticamente
+                    const reader = new FileReader();
+                    reader.onload = (evento) => procesarContidoCSV(evento.target.result);
+                    reader.onerror = () => mensaxeInicial.innerHTML = `<p style="color:red;"><b>Erro:</b> Non se puido ler o ficheiro.</p>`;
+                    reader.readAsText(file, 'UTF-8');
+                    document.getElementById("acta-file").style.display = "none";
+                }
             });
 
             //exportarActaBtn.addEventListener('click', xerarActaODT);
@@ -419,15 +425,40 @@
                         datosPorAlumno[doi] = { nomeCompleto, suspensos: 0, avaliados: 0 };
                     }
 
+                    // CONTAR Avaliados, Aprobados, Suspensos
                     if (cualificacionStr.toLowerCase() !== 'sen cualificar' && cualificacionStr !== '') {
-                        const nota = parseInt(cualificacionStr, 10);
-                        if (!isNaN(nota)) {
+                        let notaValida = false;
+                        let nota = null;
+                        let isSuspenso = false;
+                        
+                        if (cualificacionStr.toUpperCase() === 'PD') {
+                            notaValida = true;
+                            isSuspenso = true; // PD se considera suspenso
+                        } else {
+                            nota = parseInt(cualificacionStr, 10);
+                            if (!isNaN(nota)) {
+                                notaValida = true;
+                                isSuspenso = nota < 5;
+                            }
+                        }
+                        
+                        if (notaValida) {
                             estadisticasModulos[materia].avaliados++;
-                            nota >= 5 ? estadisticasModulos[materia].aprobados++ : estadisticasModulos[materia].suspensos++;
+                            
+                            if (!isSuspenso) {
+                                estadisticasModulos[materia].aprobados++;
+                            } else {
+                                estadisticasModulos[materia].suspensos++;
+                            }
+                            
                             datosPorAlumno[doi].avaliados++;
-                            if (nota < 5) datosPorAlumno[doi].suspensos++;
+                            
+                            if (isSuspenso) {
+                                datosPorAlumno[doi].suspensos++;
+                            }
                         }
                     }
+
                 }
 
                 // Calcular estatísticas de suspensos e listaxes
@@ -511,19 +542,14 @@
                 const tablaModulos = document.querySelector('#informeModulos table');
                 if (tablaModulos) {
                     dataTableModulos = $(tablaModulos).DataTable({
-                        language: {
+                        /*language: {
                             url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/gl.json',
-                            search: "Buscar:",
-                            lengthMenu: "Mostrar _MENU_ rexistros",
-                            info: "Mostrando _START_ a _END_ de _TOTAL_ rexistros",
-                            paginate: {
-                                first: "Primeiro",
-                                last: "Último",
-                                next: "Seguinte",
-                                previous: "Anterior"
-                            }
-                        },
-                        pageLength: 10,
+                        },*/
+                        "searching": false,      // Elimina el cuadro de búsqueda
+                        "lengthChange": false,   // Elimina el desplegable "Mostrar X registros"
+                        "paging": false,          // Elimina todos los botones de navegación (paginación)                          
+                        "info": false,            // Elimina el texto "Mostrando X de Y registros"
+                        "dom": 't',                        
                         order: [[0, 'asc']]
                     });
                 }
