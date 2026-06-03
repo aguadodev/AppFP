@@ -313,6 +313,7 @@
             datosPorAlumno: null,
             infoCiclo: null,
             contadorSuspensos: null,
+            avaliacion: null,
             totalAlumnos: 0,
             totalModulosAvaliados: 0,
             listaxesPorCategoria: null,
@@ -382,6 +383,7 @@
                 const idxApelido1 = cabecera.indexOf('1º APELIDO');
                 const idxApelido2 = cabecera.indexOf('2º APELIDO');
                 const idxNome = cabecera.indexOf('NOME');
+                const idxAvaliacion = cabecera.indexOf('Nº AVALIACIÓN');
                 const idxMateria = cabecera.indexOf('MATERIA');
                 const idxCualificacion = cabecera.indexOf('CUALIFICACIÓN');
                 const idxCurso = cabecera.indexOf('CURSO');
@@ -402,6 +404,14 @@
                     if (!infoCiclo.curso) {
                         infoCiclo.curso = campos[idxCurso];
                     }
+                    // Obtén o número/tipo de avaliación
+                    if (avaliacion == null)
+                        switch (campos[idxAvaliacion][0]) {
+                            case "1": avaliacion = "1ª AVALIACIÓN"; break;
+                            case "2": avaliacion = "2ª AVALIACIÓN"; break;
+                            case "3": avaliacion = "3ª AVALIACIÓN"; break;
+                            default: avaliacion = "AVALIACIÓN FINAL";
+                        }
 
                     if (!estadisticasModulos[materia]) {
                         estadisticasModulos[materia] = { matriculados: 0, avaliados: 0, aprobados: 0, suspensos: 0 };
@@ -656,7 +666,7 @@
                 <body lang="es-ES" text="#000000" dir="ltr">
                     <div title="header"><p style="margin-bottom: 0cm; line-height: 100%"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='605' height='86' viewBox='0 0 605 86'%3E%3Crect width='605' height='86' fill='%233498db'/%3E%3Ctext x='20' y='50' fill='white' font-size='24' font-weight='bold'%3EXUNTA DE AVALIACIÓN%3C/text%3E%3C/svg%3E" name="Imagen1" align="bottom" width="605" height="86" border="0"/></p></div>
                     
-                    <p class="western" align="center" style="margin-bottom: 0cm; line-height: 150%"><font face="Trebuchet MS, sans-serif"><font size="5" style="font-size: 20pt"><span lang="gl-ES"><b>ACTA DA XUNTA DA 1ª AVALIACIÓN</b></span></font></font></p>
+                    <p class="western" align="center" style="margin-bottom: 0cm; line-height: 150%"><font face="Trebuchet MS, sans-serif"><font size="5" style="font-size: 20pt"><span lang="gl-ES"><b>ACTA DA XUNTA DA ${avaliacion}</b></span></font></font></p>
                     
                     <table width="622" cellpadding="7" cellspacing="0">
                         <tr><td width="177"><p lang="gl-ES" class="western" align="center"><b>CURSO</b></p></td><td width="178"><p lang="gl-ES" class="western" align="center"><b>GRUPO</b></p></td><td width="223"><p lang="gl-ES" class="western" align="center"><b>DATA</b></p></td></tr>

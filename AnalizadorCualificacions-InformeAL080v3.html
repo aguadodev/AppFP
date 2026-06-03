@@ -319,6 +319,7 @@
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
     <script>
+        let avaliacion = null;
         let datosAnalise = {
             estadisticasModulos: null,
             datosPorAlumno: null,
@@ -393,6 +394,7 @@
                 const idxApelido1 = cabecera.indexOf('1º APELIDO');
                 const idxApelido2 = cabecera.indexOf('2º APELIDO');
                 const idxNome = cabecera.indexOf('NOME');
+                const idxAvaliacion = cabecera.indexOf('Nº AVALIACIÓN');
                 const idxMateria = cabecera.indexOf('MATERIA');
                 const idxCualificacion = cabecera.indexOf('CUALIFICACIÓN');
                 const idxCurso = cabecera.indexOf('CURSO');
@@ -414,6 +416,15 @@
                         infoCiclo.curso = campos[idxCurso];
                     }
 
+                    // Obtén o número/tipo de avaliación
+                    if (avaliacion == null)
+                        switch (campos[idxAvaliacion][0]) {
+                            case "1": avaliacion = "1ª AVALIACIÓN"; break;
+                            case "2": avaliacion = "2ª AVALIACIÓN"; break;
+                            case "3": avaliacion = "3ª AVALIACIÓN"; break;
+                            default: avaliacion = "AVALIACIÓN FINAL";
+                        }
+                    
                     if (!estadisticasModulos[materia]) {
                         estadisticasModulos[materia] = { matriculados: 0, avaliados: 0, aprobados: 0, suspensos: 0 };
                     }
@@ -602,7 +613,6 @@
                         alert('⚠️ Primeiro analiza un ficheiro CSV');
                         return;
                     }
-
                     const exportarBtn = document.getElementById('exportarActaBtn');
                     const textoOrixinal = exportarBtn.textContent;
                     exportarBtn.textContent = '⏳ Xerando acta...';
@@ -875,7 +885,7 @@
         <body>
             <div class="documento">
                 <div class="contenido">
-                    <h1>ACTA DA XUNTA DA 1ª AVALIACIÓN</h1>
+                    <h1>ACTA DA XUNTA DA ` + avaliacion + `</h1>
                     
                     <!-- Táboa de datos xerais -->
                     <table style="width: 100%; margin-bottom: 20px;">
@@ -1004,10 +1014,10 @@
                     exportarBtn.textContent = textoOrixinal;
                     exportarBtn.disabled = false;
 
-                    alert('✅ Acta xerada! Abriuse unha nova ventá co documento.\n\n' +
+                    /*alert('✅ Acta xerada! Abriuse unha nova ventá co documento.\n\n' +
                         '✏️ Podes editar calquera sección facendo clic nas áreas amarelas.\n' +
                         '🖨️ Imprime directamente desde o navegador.\n' +
-                        '💾 Garda como HTML para editar despois, ou abre con LibreOffice e garda como ODT.');
+                        '💾 Garda como HTML para editar despois, ou abre con LibreOffice e garda como ODT.');*/
 
                 } catch (error) {
                     console.error('Erro detallado:', error);
