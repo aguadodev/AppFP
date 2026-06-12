@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>HTML → DOCX</title>
+</head>
+<body>
+
+<button id="export">
+Exportar DOCX
+</button>
+
+<script type="module">
+
+import {
+    Document,
+    Packer,
+    Paragraph,
+    HeadingLevel,
+    TextRun,
+    ExternalHyperlink,
+    Table,
+    TableRow,
+    TableCell
+}
+from "https://esm.sh/docx@9.5.1";
+
+
+// =====================================================
+// HTML DE ENTRADA
+// =====================================================
+
+const html = `
+
+<h1>Título principal</h1>
+
+<p>
+Texto normal con
+<strong>negrita</strong>,
+<em>cursiva</em>,
+<u>subrayado</u>
+y un
+<a href="https://example.com">
+enlace
+</a>.
+</p>
+
+<h2>Lista</h2>
+
+<ul>
+    <li>Elemento 1</li>
+    <li>Elemento 2</li>
+</ul>
+
+<h2>Cita</h2>
+
+<blockquote>
+La simplicidad es la máxima sofisticación.
+</blockquote>
+
+<h2>Código</h2>
+
+<pre>
+function hello() {
+    console.log("hola");
+}
+</pre>
+
+<h2>Tabla</h2>
+
+<table>
+
+<tr>
+    <th>Nombre</th>
+    <th>Edad</th>
+</tr>
+
+<tr>
+    <td>Ana</td>
+    <td>30</td>
+</tr>
+
+<tr>
+    <td>Luis</td>
+    <td>45</td>
+</tr>
+
+</table>
+
+`;
+
+
+// =====================================================
+// VALIDACIÓN
+// =====================================================
+
+function validate(dom) {
+
+    const warnings = [];
+
+    let lastHeading = 0;
+
+    dom.querySelectorAll(
+        "h1,h2,h3,h4,h5,h6"
+    ).forEach(h => {
+
+        const level =
+            Number(h.tagName[1]);
+
+        if (
+            lastHeading &&
+            level > lastHeading + 1
+        ) {
+            warnings.push(
+                `Salto de encabezado: H${lastHeading} → H${level}`
+            );
+        }
+
+        lastHeading = level;
+    });
+
+    dom.querySelectorAll("a")
+        .forEach(a => {
+
+            if (!a.href) {
+                warnings.push(
+                    "Enlace sin href"
+                );
+            }
+        });
+
+    dom.querySelectorAll("table")
+        .forEach(table => {
+
+            const rows =
+                table.querySelectorAll("tr");
+
+            if (!rows.length) {
+                warnings.push(
+                    "Tabla vacía"
+                );
+                return;
+            }
+
+            const cols =
+                rows[0]
+                    .querySelectorAll("td,th")
+                    .length;
+
+            rows.forEach(r => {
+
+                const current =
+                    r.querySelectorAll(
+                        "td,th"
+                    ).length;
+
+                if (current !== cols) {
+
+                    warnings.push(
+                        "Tabla irregular"
+                    );
+                }
+            });
+        });
+
+    return warnings;
+}
+
+
+// =====================================================
+// INLINE HTML → TEXTRUNS
+// =====================================================
+
+function parseInline(node) {
+
+    const runs = [];
+
+    node.childNodes.forEach(child => {
+
+        if (
+            child.nodeType ===
+            Node.TEXT_NODE
+        ) {
+
+            runs.push(
+                new TextRun(
+                    child.textContent
+                )
+            );
+
+            return;
+        }
+
+        const tag =
+            child.tagName?.toLowerCase();
+
+        if (
+            tag === "strong" ||
+            tag === "b"
+        ) {
+
+            runs.push(
+                new TextRun({
+                    text:
+                        child.textContent,
+                    bold: true
+                })
+            );
+
+            return;
+        }
+
+        if (
+            tag === "em" ||
+            tag === "i"
+        ) {
+
+            runs.push(
+                new TextRun({
+                    text:
+                        child.textContent,
+                    italics: true
+                })
+            );
+
+            return;
+        }
+
+        if (tag === "u") {
+
+            runs.push(
+                new TextRun({
+                    text:
+                        child.textContent,
+                    underline: {}
+                })
+            );
+
+            return;
+        }
+
+        if (tag === "br") {
+
+            runs.push(
+                new TextRun({
+                    break: 1
+                })
+            );
+
+            return;
+        }
+
+        if (tag === "a") {
+
+            runs.push(
+                new ExternalHyperlink({
+
+                    link:
+                        child.href,
+
+                    children: [
+
+                        new TextRun({
+                            text:
+                                child.textContent,
+                            style:
+                                "Hyperlink"
+                        })
+
+                    ]
+                })
+            );
+        }
+    });
+
+    return runs;
+}
+
+
+// =====================================================
+// HTML → DOCX
+// =====================================================
+
+function convertHTML(html) {
+
+    const parser =
+        new DOMParser();
+
+    const dom =
+        parser.parseFromString(
+            html,
+            "text/html"
+        );
+
+    const children = [];
+
+    for (
+        const node of
+        dom.body.children
+    ) {
+
+        const tag =
+            node.tagName
+                .toLowerCase();
+
+        // headings
+
+        if (/h[1-6]/.test(tag)) {
+
+            const level =
+                Number(tag[1]);
+
+            const map = {
+                1:
+                HeadingLevel.HEADING_1,
+                2:
+                HeadingLevel.HEADING_2,
+                3:
+                HeadingLevel.HEADING_3,
+                4:
+                HeadingLevel.HEADING_4,
+                5:
+                HeadingLevel.HEADING_5,
+                6:
+                HeadingLevel.HEADING_6
+            };
+
+            children.push(
+                new Paragraph({
+                    text:
+                        node.textContent,
+                    heading:
+                        map[level]
+                })
+            );
+
+            continue;
+        }
+
+        // paragraph
+
+        if (tag === "p") {
+
+            children.push(
+                new Paragraph({
+                    children:
+                        parseInline(node)
+                })
+            );
+
+            continue;
+        }
+
+        // blockquote
+
+        if (
+            tag ===
+            "blockquote"
+        ) {
+
+            children.push(
+                new Paragraph({
+                    indent: {
+                        left: 720
+                    },
+                    children: [
+                        new TextRun({
+                            italics: true,
+                            text:
+                                node.textContent
+                        })
+                    ]
+                })
+            );
+
+            continue;
+        }
+
+        // pre
+
+        if (
+            tag === "pre"
+        ) {
+
+            children.push(
+                new Paragraph({
+
+                    children: [
+
+                        new TextRun({
+
+                            text:
+                                node.textContent,
+
+                            font:
+                                "Courier New"
+
+                        })
+
+                    ]
+                })
+            );
+
+            continue;
+        }
+
+        // ul
+
+        if (
+            tag === "ul"
+        ) {
+
+            node
+                .querySelectorAll(
+                    ":scope > li"
+                )
+                .forEach(li => {
+
+                    children.push(
+                        new Paragraph({
+
+                            text:
+                                li.textContent,
+
+                            bullet: {
+                                level: 0
+                            }
+
+                        })
+                    );
+
+                });
+
+            continue;
+        }
+
+        // ol
+
+        if (
+            tag === "ol"
+        ) {
+
+            let index = 1;
+
+            node
+                .querySelectorAll(
+                    ":scope > li"
+                )
+                .forEach(li => {
+
+                    children.push(
+                        new Paragraph({
+                            text:
+                                `${index++}. ${li.textContent}`
+                        })
+                    );
+
+                });
+
+            continue;
+        }
+
+        // table
+
+        if (
+            tag === "table"
+        ) {
+
+            const rows = [];
+
+            node
+                .querySelectorAll(
+                    "tr"
+                )
+                .forEach(tr => {
+
+                    const cells = [];
+
+                    tr
+                        .querySelectorAll(
+                            "td,th"
+                        )
+                        .forEach(cell => {
+
+                            cells.push(
+                                new TableCell({
+
+                                    children: [
+
+                                        new Paragraph(
+                                            cell.textContent
+                                        )
+
+                                    ]
+
+                                })
+                            );
+
+                        });
+
+                    rows.push(
+                        new TableRow({
+                            children:
+                                cells
+                        })
+                    );
+
+                });
+
+            children.push(
+                new Table({
+                    rows
+                })
+            );
+        }
+    }
+
+    return {
+        dom,
+        children
+    };
+}
+
+
+// =====================================================
+// EXPORTAR
+// =====================================================
+
+document
+    .getElementById("export")
+    .addEventListener(
+        "click",
+        async () => {
+
+            const {
+                dom,
+                children
+            } =
+                convertHTML(
+                    html
+                );
+
+            const warnings =
+                validate(dom);
+
+            if (
+                warnings.length
+            ) {
+
+                console.warn(
+                    "VALIDACIÓN"
+                );
+
+                console.table(
+                    warnings
+                );
+            }
+
+            const doc =
+                new Document({
+
+                    sections: [
+                        {
+                            children
+                        }
+                    ]
+
+                });
+
+            const blob =
+                await Packer
+                    .toBlob(doc);
+
+            const url =
+                URL.createObjectURL(
+                    blob
+                );
+
+            const a =
+                document
+                    .createElement(
+                        "a"
+                    );
+
+            a.href = url;
+            a.download =
+                "documento.docx";
+
+            a.click();
+
+            URL.revokeObjectURL(
+                url
+            );
+        }
+    );
+
+</script>
+
+</body>
+</html>

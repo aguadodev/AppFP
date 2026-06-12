@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>DOCX Demo</title>
+</head>
+<body>
+
+<button id="generar">
+Generar DOCX
+</button>
+
+<script type="module">
+
+import {
+    Document,
+    Packer,
+    Paragraph,
+    HeadingLevel,
+    TextRun
+} from "https://esm.sh/docx@9.5.1";
+
+document
+    .getElementById("generar")
+    .addEventListener("click", async () => {
+
+        const doc = new Document({
+            sections: [{
+                children: [
+
+                    new Paragraph({
+                        text: "Mi primer DOCX",
+                        heading: HeadingLevel.HEADING_1
+                    }),
+
+                    new Paragraph({
+                        children: [
+                            new TextRun("Texto normal "),
+                            new TextRun({
+                                text: "negrita ",
+                                bold: true
+                            }),
+                            new TextRun({
+                                text: "cursiva",
+                                italics: true
+                            })
+                        ]
+                    })
+
+                ]
+            }]
+        });
+
+        const blob = await Packer.toBlob(doc);
+
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "ejemplo.docx";
+
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        URL.revokeObjectURL(url);
+    });
+
+</script>
+
+</body>
+</html>
