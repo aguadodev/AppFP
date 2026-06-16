@@ -296,6 +296,31 @@
         .search-box button {
             padding: 8px 16px;
         }
+
+
+        /* INFORMES INDIVIDUALIZADOS */
+        /* Estilos para el botón pequeño */
+        .btn-generar-informe {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            font-size: 13px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .btn-generar-informe:hover {
+            background: #45a049;
+        }
+        .btn-generar-informe:active {
+            transform: scale(0.97);
+        }
+
+
+
     </style>
 </head>
 
@@ -374,6 +399,11 @@
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
+
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+
+
     <script>
         let avaliacion = null;
         let datosAnalise = {
@@ -393,6 +423,259 @@
 
         // Establecer data actual por defecto
         document.getElementById('dataActa').valueAsDate = new Date();
+
+
+
+
+
+
+
+
+
+
+
+        /* INFORMES INDIVIDUALIZADOS */
+/**
+ * Método que genera el informe individualizado
+ * @param {Object} alumno - Objeto con los datos del alumno
+ */
+async function generarInformeIndividualizado(alumno) {
+    try {
+        console.log('Generando informe para:', alumno.nomeCompleto);
+        console.log('Datos del alumno:', alumno);
+        
+        // Extraer nombre y apellidos del nomeCompleto
+        const partesNombre = alumno.nomeCompleto.split(' ');
+        const nombre = partesNombre[0] || '';
+        const apellidos = partesNombre.slice(1).join(' ') || '';
+        
+        // Formatear fecha de nacimiento si existe
+        let fechaNacimiento = '';
+        if (alumno.dataNacemento) {
+            const fecha = new Date(alumno.dataNacemento);
+            fechaNacimiento = fecha.toLocaleDateString('es-ES');
+        }
+        
+        // Crear objeto con la estructura que espera el PDF
+        const datosAlumno = {
+            nombre: nombre,
+            apellidos: apellidos,
+            nomeCompleto: alumno.nomeCompleto,
+            email: alumno.email || 'No especificado',
+            telefono: alumno.telefono || 'No especificado',
+            fechaNacimiento: fechaNacimiento,
+            curso: alumno.curso || 'No especificado',
+            modulosSuspensos: alumno.modulosSuspensos || [],
+            numSuspensos: alumno.modulosSuspensos ? alumno.modulosSuspensos.length : 0,
+            comentarios: `Alumno con ${alumno.modulosSuspensos ? alumno.modulosSuspensos.length : 0} módulo(s) suspenso(s).\n${alumno.modulosSuspensos ? alumno.modulosSuspensos.map(m => `- ${m.modulo}: ${m.nota}`).join('\n') : 'Todos los módulos aprobados'}`
+        };
+        
+        console.log('Datos formateados para el PDF:', datosAlumno);
+        
+        // Llamar a la función que genera el PDF
+        await generarPDFInforme(datosAlumno);
+        
+    } catch (error) {
+        console.error('Error al generar el informe:', error);
+        alert('Error al generar el informe: ' + error.message);
+    }
+}
+
+/**
+ * Genera el PDF con los datos del alumno
+ * @param {Object} datosAlumno - Datos formateados del alumno
+ */
+async function generarPDFInforme(datosAlumno) {
+    try {
+        const { PDFDocument, rgb, StandardFonts } = PDFLib;
+        const pdfDoc = await PDFDocument.create();
+        const page = pdfDoc.addPage([612, 792]);
+        
+        // Fuentes
+        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+        const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        
+        // --- CABECERA ---
+        page.drawText('INFORME INDIVIDUALIZADO', {
+            x: 50,
+            y: 750,
+            size: 22,
+            font: fontBold,
+            color: rgb(0.2, 0.4, 0.8),
+        });
+        
+        page.drawLine({
+            start: { x: 50, y: 735 },
+            end: { x: 562, y: 735 },
+            thickness: 2,
+            color: rgb(0.2, 0.4, 0.8),
+        });
+        
+        // Fecha
+        const fechaActual = new Date().toLocaleDateString('es-ES');
+        page.drawText(`Fecha: ${fechaActual}`, {
+            x: 450,
+            y: 760,
+            size: 10,
+            font: font,
+            color: rgb(0.3, 0.3, 0.3),
+        });
+        
+        // --- CREAR FORMULARIO ---
+        const form = pdfDoc.getForm();
+        let yPos = 700;
+        const xPos = 50;
+        const anchoCampo = 300;
+        const altoCampo = 20;
+        
+        function crearCampoTexto(nombre, etiqueta, valor, yPos, fontSize = 11, ancho = anchoCampo) {
+            page.drawText(`${etiqueta}:`, {
+                x: xPos,
+                y: yPos + 5,
+                size: 12,
+                font: fontBold,
+                color: rgb(0.1, 0.1, 0.1),
+            });
+            
+            const campo = form.createTextField(nombre);
+            campo.setText(valor || '');
+            campo.addToPage(page, {
+                x: xPos + 120,
+                y: yPos - 5,
+                width: ancho,
+                height: altoCampo,
+                borderWidth: 1,
+                borderColor: rgb(0.2, 0.4, 0.8),
+                textColor: rgb(0.1, 0.1, 0.1),
+                fontSize: fontSize,
+            });
+        }
+        
+        // Datos del alumno
+        crearCampoTexto('nombre', 'Nombre', datosAlumno.nombre, yPos);
+        yPos -= 35;
+        
+        crearCampoTexto('apellidos', 'Apellidos', datosAlumno.apellidos, yPos);
+        yPos -= 35;
+        
+        crearCampoTexto('nombre_completo', 'Nombre completo', datosAlumno.nomeCompleto, yPos);
+        yPos -= 35;
+        
+        crearCampoTexto('email', 'Email', datosAlumno.email, yPos);
+        yPos -= 35;
+        
+        crearCampoTexto('telefono', 'Teléfono', datosAlumno.telefono, yPos);
+        yPos -= 35;
+        
+        crearCampoTexto('fecha_nacimiento', 'Fecha nacimiento', datosAlumno.fechaNacimiento, yPos);
+        yPos -= 35;
+        
+        crearCampoTexto('curso', 'Curso', datosAlumno.curso, yPos);
+        yPos -= 35;
+        
+        // --- MÓDULOS SUSPENSOS ---
+        yPos -= 15;
+        page.drawText('Módulos suspensos:', {
+            x: xPos,
+            y: yPos + 5,
+            size: 12,
+            font: fontBold,
+            color: rgb(0.1, 0.1, 0.1),
+        });
+        
+        const modulosTexto = datosAlumno.modulosSuspensos.length > 0 
+            ? datosAlumno.modulosSuspensos.map(m => `${m.modulo} (${m.nota})`).join(', ')
+            : 'Ninguno - Todos aprobados ✅';
+        
+        crearCampoTexto('modulos_suspensos', '', modulosTexto, yPos, 11, anchoCampo + 50);
+        yPos -= 35;
+        
+        // --- CAMPO DE COMENTARIOS (fuente grande) ---
+        yPos -= 15;
+        page.drawText('Comentarios / Observaciones:', {
+            x: xPos,
+            y: yPos + 5,
+            size: 14,
+            font: fontBold,
+            color: rgb(0.1, 0.1, 0.1),
+        });
+        
+        const campoComentarios = form.createTextField('comentarios');
+        campoComentarios.setText(datosAlumno.comentarios || '');
+        campoComentarios.addToPage(page, {
+            x: xPos + 150,
+            y: yPos - 60,
+            width: anchoCampo + 50,
+            height: 80,
+            borderWidth: 2,
+            borderColor: rgb(0.2, 0.4, 0.8),
+            textColor: rgb(0.1, 0.1, 0.1),
+            fontSize: 13,
+            backgroundColor: rgb(0.95, 0.97, 1),
+        });
+        
+        // --- PIE DE PÁGINA ---
+        page.drawText('Documento generado automáticamente - Campos editables', {
+            x: 50,
+            y: 50,
+            size: 8,
+            font: font,
+            color: rgb(0.5, 0.5, 0.5),
+        });
+        
+        page.drawText('Abre con Adobe Acrobat Reader para editar los campos', {
+            x: 50,
+            y: 35,
+            size: 8,
+            font: font,
+            color: rgb(0.5, 0.5, 0.5),
+        });
+        
+        // --- GUARDAR ---
+        const pdfBytes = await pdfDoc.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `informe_${datosAlumno.nombre}_${datosAlumno.apellidos.replace(/\s/g, '_')}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        console.log('✅ Informe generado correctamente');
+        
+    } catch (error) {
+        console.error('Error al generar el PDF:', error);
+        throw error;
+    }
+}        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         document.addEventListener('DOMContentLoaded', () => {
             const csvFileInput = document.getElementById('csvFileInput');
@@ -718,6 +1001,9 @@
                 return html;
             }
 
+
+
+
             // Nueva función: Generar listado detallado de alumnos con módulos suspensos
             function xerarListadoAlumnos(datos) {
                 const { detallesAlumnos, totalAlumnos } = datos;
@@ -755,8 +1041,10 @@
                     
                     const numSuspensos = alumno.modulosSuspensos.length;
                     const estadoClase = numSuspensos === 0 ? 'badge-aprobado' : '';
-                    const estadoTexto = numSuspensos === 0 ? '✅ Todas aprobadas' : `${numSuspensos} suspenso${numSuspensos !== 1 ? 's' : ''}`;
-                    
+                    const estadoTexto = numSuspensos === 0 ? '✅ Todas aprobadas' : 
+    `${numSuspensos} suspenso${numSuspensos !== 1 ? 's' : ''} 
+    <br><button class="btn-generar-informe" data-alumno='${JSON.stringify(alumno).replace(/'/g, "&#39;")}'>📄 Informe</button>`;
+    
                     html += `
                         <tr>
                             <td style="text-align: center;">${index++}</td>
@@ -779,6 +1067,22 @@
                 
                 return html;
             }
+
+
+        // Event listener delegado (fuera del bucle)
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('btn-generar-informe')) {
+                const alumnoData = e.target.getAttribute('data-alumno');
+                const alumno = JSON.parse(alumnoData);
+                generarInformeIndividualizado(alumno);
+            }
+        });
+
+
+
+
+
+
 
             function xerarActaODT() {
                 if (!datosAnalise.estadisticasModulos) {
