@@ -400,29 +400,57 @@
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
 
-    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-
-
-
     <script>
-        let avaliacion = null;
-        let datosAnalise = {
-            estadisticasModulos: null,
-            datosPorAlumno: null,
-            infoCiclo: null,
-            contadorSuspensos: null,
-            totalAlumnos: 0,
-            totalModulosAvaliados: 0,
-            listaxesPorCategoria: null,
-            modulosOrdenados: null,
-            detallesAlumnos: null  // Nuevo: almacena detalles de módulos suspensos por alumno
-        };
 
-        let dataTableModulos = null;
-        let dataTableListadoAlumnos = null;
+// ============================================================
+// VARIABLES GLOBALES
+// ============================================================
+let avaliacion = null;
+let datosAnalise = {
+    estadisticasModulos: null,
+    datosPorAlumno: null,
+    infoCiclo: null,
+    contadorSuspensos: null,
+    totalAlumnos: 0,
+    totalModulosAvaliados: 0,
+    listaxesPorCategoria: null,
+    modulosOrdenados: null,
+    detallesAlumnos: null  // Almacena módulos suspensos por alumno
+};
 
-        // Establecer data actual por defecto
-        document.getElementById('dataActa').valueAsDate = new Date();
+// ============================================================
+// ESTRUCTURAS DE DATOS PARA ALMACENAR INFORMACIÓN DEL CSV
+// ============================================================
+const datosCSV = {
+    // Datos comunes del ciclo (tomados de la primera fila)
+    curso: '',
+    regimen: '',
+    anoAcademico: '',
+    avaliacion: '',
+    
+    // Datos de todos los alumnos (mapeados por DOI)
+    alumnos: {}
+};        
+
+
+
+// @TODO - INICIO ELIMINAR?
+    let dataTableModulos = null;
+    let dataTableListadoAlumnos = null;
+
+    // Establecer data actual por defecto
+    document.getElementById('dataActa').valueAsDate = new Date();
+// @TODO - FIN ELIMINAR?
+
+
+
+
+
+
+
+
+
+</script>
 
 
 
@@ -434,9 +462,11 @@
 
 
 
-        /* INFORMES INDIVIDUALIZADOS */
 
 
+<!-- INFORMES INDIVIDUALIZADOS -->
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script>
 /**
  * Genera el informe individualizado usando una plantilla PDF CON CAMPOS EDITABLES QUE RELLENA
  * @param {Object} alumno - Objeto con los datos del alumno
@@ -447,22 +477,13 @@ async function generarInformeIndividualizado(alumno) {
         console.log('Datos del alumno:', alumno);
         
         // Extraer nombre y apellidos del nomeCompleto
-        const partesNombre = alumno.nomeCompleto.trim().split(' ');
-        const nombre = partesNombre[0] || '';
-        // El resto es el apellido (puede tener varios)
-        let apellidos = partesNombre.slice(1).join(' ') || '';
+        const partesNombre = alumno.nomeCompleto.trim().split(',');
+        const nombre = partesNombre[1] || '';
+        const apellidos = partesNombre[0] || '';
         
-        // Si no hay apellidos, usar el nombre como apellido
-        if (!apellidos) {
-            apellidos = nombre;
-        }
-        
+
         // Crear nombre para el archivo: Apellidos_Nombre
         const nombreArchivo = `${apellidos.replace(/\s/g, '_')}_${nombre}`;
-        
-        console.log('Nombre:', nombre);
-        console.log('Apellidos:', apellidos);
-        console.log('Nombre archivo:', nombreArchivo);
         
         // Ruta de la plantilla
         const rutaPlantilla = 'GenerarODT-DOC/Informe_Individualizado-ALUMNO.pdf';
@@ -485,31 +506,21 @@ async function generarInformeIndividualizado(alumno) {
         
         // Verificar que los campos existen y rellenarlos
         try {
-            const campoNombre = form.getTextField('frmNombre');
-            campoNombre.setText(nombre);
-            console.log('✅ Campo frmNombre rellenado');
+            form.getTextField('frmCiclo').setText(datosCSV.curso);
+            form.getTextField('frmRexime').setText(datosCSV.regimen);
+            form.getTextField('frmAnoAcademico').setText(datosCSV.anoAcademico);
+            form.getTextField('frmGrupo').setText('A');
+            form.getTextField('frmFecha').setText(document.getElementById('dataActa').value);
+            form.getTextField('frmTitor').setText(document.getElementById('titorActa').value);
+
+
+            form.getTextField('frmNombre').setText(nombre);
+            form.getTextField('frmApelidos').setText(apellidos);
+            form.getTextField('frmDNI').setText(alumno.doi);
         } catch (error) {
             console.warn('⚠️ Campo frmNombre no encontrado en la plantilla');
         }
-        
-        try {
-            const campoApellidos = form.getTextField('frmApelidos');
-            campoApellidos.setText(apellidos);
-            console.log('✅ Campo frmApelidos rellenado');
-        } catch (error) {
-            console.warn('⚠️ Campo frmApelidos no encontrado en la plantilla');
-        }
-        
-        // Si el PDF tiene otros campos, puedes rellenarlos aquí
-        // Por ejemplo, si tuvieras campos de email, teléfono, etc.
-        try {
-            const campoEmail = form.getTextField('frmEmail');
-            campoEmail.setText(alumno.email || '');
-            console.log('✅ Campo frmEmail rellenado');
-        } catch (error) {
-            // El campo no existe, lo ignoramos
-        }
-        
+                
         // Guardar el PDF rellenado
         const pdfBytes = await pdfDoc.save();
         
@@ -541,251 +552,91 @@ async function generarInformeIndividualizado(alumno) {
 }
 
 
-
-/**
- * Método que genera el informe individualizado EN PDF CON CAMPOS EDITABLES DESDE CERO
- * @param {Object} alumno - Objeto con los datos del alumno
- */
 /*
+// ============================================================
+// FUNCIÓN PARA GENERAR INFORME INDIVIDUALIZADO (ACTUALIZADA)
+// ============================================================
 async function generarInformeIndividualizado(alumno) {
     try {
         console.log('Generando informe para:', alumno.nomeCompleto);
-        console.log('Datos del alumno:', alumno);
         
-        // Extraer nombre y apellidos del nomeCompleto
-        const partesNombre = alumno.nomeCompleto.split(' ');
+        // Extraer nombre y apellidos
+        const partesNombre = alumno.nomeCompleto.trim().split(' ');
         const nombre = partesNombre[0] || '';
-        const apellidos = partesNombre.slice(1).join(' ') || '';
+        let apellidos = partesNombre.slice(1).join(' ') || '';
+        if (!apellidos) apellidos = nombre;
         
-        // Formatear fecha de nacimiento si existe
-        let fechaNacimiento = '';
-        if (alumno.dataNacemento) {
-            const fecha = new Date(alumno.dataNacemento);
-            fechaNacimiento = fecha.toLocaleDateString('es-ES');
+        const nombreArchivo = `${apellidos.replace(/\s/g, '_')}_${nombre}`;
+        
+        // Usar datos adicionales del CSV si están disponibles
+        const datosCSVCompletos = obtenerDatosCSV();
+        const alumnoCompleto = datosCSVCompletos.getAlumno(alumno.doi) || alumno;
+        
+        // Ruta de la plantilla
+        const rutaPlantilla = 'GenerarODT-DOC/Informe_Individualizado-ALUMNO.pdf';
+        const respuesta = await fetch(rutaPlantilla);
+        
+        if (!respuesta.ok) {
+            throw new Error(`No se pudo cargar la plantilla: ${respuesta.status}`);
         }
         
-        // Crear objeto con la estructura que espera el PDF
-        const datosAlumno = {
-            nombre: nombre,
-            apellidos: apellidos,
-            nomeCompleto: alumno.nomeCompleto,
-            email: alumno.email || 'No especificado',
-            telefono: alumno.telefono || 'No especificado',
-            fechaNacimiento: fechaNacimiento,
-            curso: alumno.curso || 'No especificado',
-            modulosSuspensos: alumno.modulosSuspensos || [],
-            numSuspensos: alumno.modulosSuspensos ? alumno.modulosSuspensos.length : 0,
-            comentarios: `Alumno con ${alumno.modulosSuspensos ? alumno.modulosSuspensos.length : 0} módulo(s) suspenso(s).\n${alumno.modulosSuspensos ? alumno.modulosSuspensos.map(m => `- ${m.modulo}: ${m.nota}`).join('\n') : 'Todos los módulos aprobados'}`
-        };
-        
-        console.log('Datos formateados para el PDF:', datosAlumno);
-        
-        // Llamar a la función que genera el PDF
-        await generarPDFInforme(datosAlumno);
-        
-    } catch (error) {
-        console.error('Error al generar el informe:', error);
-        alert('Error al generar el informe: ' + error.message);
-    }
-}
-
-*/
-/**
- * Genera el PDF con los datos del alumno
- * @param {Object} datosAlumno - Datos formateados del alumno
- */
-async function generarPDFInforme(datosAlumno) {
-    try {
-        const { PDFDocument, rgb, StandardFonts } = PDFLib;
-        const pdfDoc = await PDFDocument.create();
-        const page = pdfDoc.addPage([612, 792]);
-        
-        // Fuentes
-        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-        const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-        
-        // --- CABECERA ---
-        page.drawText('INFORME INDIVIDUALIZADO', {
-            x: 50,
-            y: 750,
-            size: 22,
-            font: fontBold,
-            color: rgb(0.2, 0.4, 0.8),
-        });
-        
-        page.drawLine({
-            start: { x: 50, y: 735 },
-            end: { x: 562, y: 735 },
-            thickness: 2,
-            color: rgb(0.2, 0.4, 0.8),
-        });
-        
-        // Fecha
-        const fechaActual = new Date().toLocaleDateString('es-ES');
-        page.drawText(`Fecha: ${fechaActual}`, {
-            x: 450,
-            y: 760,
-            size: 10,
-            font: font,
-            color: rgb(0.3, 0.3, 0.3),
-        });
-        
-        // --- CREAR FORMULARIO ---
+        const arrayBuffer = await respuesta.arrayBuffer();
+        const { PDFDocument } = PDFLib;
+        const pdfDoc = await PDFDocument.load(arrayBuffer);
         const form = pdfDoc.getForm();
-        let yPos = 700;
-        const xPos = 50;
-        const anchoCampo = 300;
-        const altoCampo = 20;
         
-        function crearCampoTexto(nombre, etiqueta, valor, yPos, fontSize = 11, ancho = anchoCampo) {
-            page.drawText(`${etiqueta}:`, {
-                x: xPos,
-                y: yPos + 5,
-                size: 12,
-                font: fontBold,
-                color: rgb(0.1, 0.1, 0.1),
-            });
+        // Rellenar campos
+        try {
+            form.getTextField('frmNombre').setText(nombre);
+            form.getTextField('frmApelidos').setText(apellidos);
             
-            const campo = form.createTextField(nombre);
-            campo.setText(valor || '');
-            campo.addToPage(page, {
-                x: xPos + 120,
-                y: yPos - 5,
-                width: ancho,
-                height: altoCampo,
-                borderWidth: 1,
-                borderColor: rgb(0.2, 0.4, 0.8),
-                textColor: rgb(0.1, 0.1, 0.1),
-                fontSize: fontSize,
-            });
+            // Si hay campo para DNI
+            try {
+                const campoDNI = form.getTextField('frmDNI');
+                campoDNI.setText(alumnoCompleto.doi || '');
+            } catch (e) {}
+            
+            // Si hay campo para curso
+            try {
+                const campoCurso = form.getTextField('frmCurso');
+                campoCurso.setText(datosCSV.curso || '');
+            } catch (e) {}
+            
+            console.log('✅ Campos rellenados correctamente');
+        } catch (error) {
+            console.warn('⚠️ Algunos campos no encontrados en la plantilla');
         }
         
-        // Datos del alumno
-        crearCampoTexto('nombre', 'Nombre', datosAlumno.nombre, yPos);
-        yPos -= 35;
-        
-        crearCampoTexto('apellidos', 'Apellidos', datosAlumno.apellidos, yPos);
-        yPos -= 35;
-        
-        crearCampoTexto('nombre_completo', 'Nombre completo', datosAlumno.nomeCompleto, yPos);
-        yPos -= 35;
-        
-        crearCampoTexto('email', 'Email', datosAlumno.email, yPos);
-        yPos -= 35;
-        
-        crearCampoTexto('telefono', 'Teléfono', datosAlumno.telefono, yPos);
-        yPos -= 35;
-        
-        crearCampoTexto('fecha_nacimiento', 'Fecha nacimiento', datosAlumno.fechaNacimiento, yPos);
-        yPos -= 35;
-        
-        crearCampoTexto('curso', 'Curso', datosAlumno.curso, yPos);
-        yPos -= 35;
-        
-        // --- MÓDULOS SUSPENSOS ---
-        yPos -= 15;
-        page.drawText('Módulos suspensos:', {
-            x: xPos,
-            y: yPos + 5,
-            size: 12,
-            font: fontBold,
-            color: rgb(0.1, 0.1, 0.1),
-        });
-        
-        const modulosTexto = datosAlumno.modulosSuspensos.length > 0 
-            ? datosAlumno.modulosSuspensos.map(m => `${m.modulo} (${m.nota})`).join(', ')
-            : 'Ninguno - Todos aprobados ✅';
-        
-        crearCampoTexto('modulos_suspensos', '', modulosTexto, yPos, 11, anchoCampo + 50);
-        yPos -= 35;
-        
-        // --- CAMPO DE COMENTARIOS (fuente grande) ---
-        yPos -= 15;
-        page.drawText('Comentarios / Observaciones:', {
-            x: xPos,
-            y: yPos + 5,
-            size: 14,
-            font: fontBold,
-            color: rgb(0.1, 0.1, 0.1),
-        });
-        
-        const campoComentarios = form.createTextField('comentarios');
-        campoComentarios.setText(datosAlumno.comentarios || '');
-        campoComentarios.addToPage(page, {
-            x: xPos + 150,
-            y: yPos - 60,
-            width: anchoCampo + 50,
-            height: 80,
-            borderWidth: 2,
-            borderColor: rgb(0.2, 0.4, 0.8),
-            textColor: rgb(0.1, 0.1, 0.1),
-            fontSize: 13,
-            backgroundColor: rgb(0.95, 0.97, 1),
-        });
-        
-        // --- PIE DE PÁGINA ---
-        page.drawText('Documento generado automáticamente - Campos editables', {
-            x: 50,
-            y: 50,
-            size: 8,
-            font: font,
-            color: rgb(0.5, 0.5, 0.5),
-        });
-        
-        page.drawText('Abre con Adobe Acrobat Reader para editar los campos', {
-            x: 50,
-            y: 35,
-            size: 8,
-            font: font,
-            color: rgb(0.5, 0.5, 0.5),
-        });
-        
-        // --- GUARDAR ---
+        // Guardar PDF
         const pdfBytes = await pdfDoc.save();
         const blob = new Blob([pdfBytes], { type: 'application/pdf' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `informe_${datosAlumno.nombre}_${datosAlumno.apellidos.replace(/\s/g, '_')}.pdf`;
+        link.download = `Informe_Individualizado-${nombreArchivo}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         
-        console.log('✅ Informe generado correctamente');
+        console.log(`✅ Informe generado: Informe_Individualizado-${nombreArchivo}.pdf`);
+        return true;
         
     } catch (error) {
-        console.error('Error al generar el PDF:', error);
-        throw error;
+        console.error('❌ Error:', error);
+        alert(`Error al generar el informe: ${error.message}`);
+        return false;
     }
-}        
+}
+*/
 
 
 
 
+</script>
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+<!-- DOMContentLoaded -->
+ <script>
         document.addEventListener('DOMContentLoaded', () => {
             const csvFileInput = document.getElementById('csvFileInput');
             const exportarActaBtn = document.getElementById('exportarActaBtn');
@@ -830,354 +681,6 @@ async function generarPDFInforme(datosAlumno) {
                 });
             });
 
-            function procesarContidoCSV(contenido) {
-                const estadisticasModulos = {};
-                const datosPorAlumno = {};
-                const detallesAlumnos = {};  // Nuevo: almacenar módulos suspensos con notas
-                let infoCiclo = { nome: '', curso: '' };
-                const lineas = contenido.split('\n').filter(linea => linea.trim() !== '');
-
-                if (lineas.length < 2) {
-                    mensaxeInicial.innerHTML = "<p>O ficheiro está baleiro ou só contén a cabeceira.</p>";
-                    return;
-                }
-
-                const cabecera = lineas[0].split(';').map(h => h.replace(/^"|"$/g, '').trim());
-                const datos = lineas.slice(1);
-
-                const idxDoi = cabecera.indexOf('Nº DOI');
-                const idxApelido1 = cabecera.indexOf('1º APELIDO');
-                const idxApelido2 = cabecera.indexOf('2º APELIDO');
-                const idxNome = cabecera.indexOf('NOME');
-                const idxAvaliacion = cabecera.indexOf('Nº AVALIACIÓN');
-                const idxMateria = cabecera.indexOf('MATERIA');
-                const idxCualificacion = cabecera.indexOf('CUALIFICACIÓN');
-                const idxCurso = cabecera.indexOf('CURSO');
-
-                if ([idxDoi, idxNome, idxMateria, idxCualificacion, idxApelido1, idxApelido2, idxCurso].includes(-1)) {
-                    mensaxeInicial.innerHTML = `<p style="color:red;"><b>Erro:</b> Faltan columnas esenciais no ficheiro CSV.</p>`;
-                    return;
-                }
-
-                for (const linea of datos) {
-                    const campos = linea.split(';').map(c => c.replace(/^"|"$/g, '').trim());
-                    const doi = campos[idxDoi];
-                    const materia = campos[idxMateria];
-                    const cualificacionStr = campos[idxCualificacion];
-
-                    if (!doi || !materia) continue;
-
-                    if (!infoCiclo.curso) {
-                        infoCiclo.curso = campos[idxCurso];
-                    }
-
-                    // Obtén o número/tipo de avaliación
-                    if (avaliacion == null)
-                        switch (campos[idxAvaliacion][0]) {
-                            case "1": avaliacion = "1ª AVALIACIÓN"; break;
-                            case "2": avaliacion = "2ª AVALIACIÓN"; break;
-                            case "3": avaliacion = "3ª AVALIACIÓN"; break;
-                            default: avaliacion = "AVALIACIÓN FINAL";
-                        }
-                    
-                    if (!estadisticasModulos[materia]) {
-                        estadisticasModulos[materia] = { matriculados: 0, avaliados: 0, aprobados: 0, suspensos: 0 };
-                    }
-                    estadisticasModulos[materia].matriculados++;
-
-                    if (!datosPorAlumno[doi]) {
-                        const apelidos = [campos[idxApelido1], campos[idxApelido2]].filter(Boolean).join(' ');
-                        const nomeCompleto = apelidos ? `${apelidos}, ${campos[idxNome]}` : campos[idxNome];
-                        datosPorAlumno[doi] = { nomeCompleto, suspensos: 0, avaliados: 0 };
-                        detallesAlumnos[doi] = { nomeCompleto, modulosSuspensos: [], todasNotas: [] };
-                    }
-
-                    // Guardar todas las notas para cada módulo
-                    let notaValida = false;
-                    let nota = null;
-                    let isSuspenso = false;
-                    let notaTexto = cualificacionStr;
-                    
-                    if (cualificacionStr.toLowerCase() !== 'sen cualificar' && cualificacionStr !== '') {
-                        if (cualificacionStr.toUpperCase() === 'PD') {
-                            notaValida = true;
-                            isSuspenso = true;
-                            notaTexto = 'PD';
-                        } else {
-                            nota = parseInt(cualificacionStr, 10);
-                            if (!isNaN(nota)) {
-                                notaValida = true;
-                                isSuspenso = nota < 5;
-                            }
-                        }
-                        
-                        if (notaValida) {
-                            estadisticasModulos[materia].avaliados++;
-                            
-                            if (!isSuspenso) {
-                                estadisticasModulos[materia].aprobados++;
-                            } else {
-                                estadisticasModulos[materia].suspensos++;
-                            }
-                            
-                            datosPorAlumno[doi].avaliados++;
-                            
-                            if (isSuspenso) {
-                                datosPorAlumno[doi].suspensos++;
-                                // Almacenar módulo suspenso con su nota
-                                detallesAlumnos[doi].modulosSuspensos.push({
-                                    modulo: materia,
-                                    nota: notaTexto
-                                });
-                            }
-                            
-                            // Almacenar todas las notas para referencia
-                            detallesAlumnos[doi].todasNotas.push({
-                                modulo: materia,
-                                nota: notaTexto,
-                                suspenso: isSuspenso
-                            });
-                        }
-                    }
-                }
-
-                // Calcular estatísticas de suspensos e listaxes
-                const contadorSuspensos = {
-                    0: 0, 1: 0, 2: 0, 3: 0, 4: 0, '5+': 0, 'todos': 0
-                };
-                const listaxesPorCategoria = {
-                    0: [], 1: [], 2: [], 3: [], 4: [], '5+': [], 'todos': []
-                };
-                let totalAlumnos = 0;
-                let totalModulosAvaliados = 0;
-
-                for (const doi in datosPorAlumno) {
-                    const alumno = datosPorAlumno[doi];
-                    totalAlumnos++;
-                    totalModulosAvaliados += alumno.avaliados;
-
-                    if (alumno.avaliados > 0) {
-                        if (alumno.suspensos === 0) {
-                            contadorSuspensos[0]++;
-                            listaxesPorCategoria[0].push(alumno.nomeCompleto);
-                        } else if (alumno.suspensos === 1) {
-                            contadorSuspensos[1]++;
-                            listaxesPorCategoria[1].push(alumno.nomeCompleto);
-                        } else if (alumno.suspensos === 2) {
-                            contadorSuspensos[2]++;
-                            listaxesPorCategoria[2].push(alumno.nomeCompleto);
-                        } else if (alumno.suspensos === 3) {
-                            contadorSuspensos[3]++;
-                            listaxesPorCategoria[3].push(alumno.nomeCompleto);
-                        } else if (alumno.suspensos === 4) {
-                            contadorSuspensos[4]++;
-                            listaxesPorCategoria[4].push(alumno.nomeCompleto);
-                        } else {
-                            contadorSuspensos['5+']++;
-                            listaxesPorCategoria['5+'].push(alumno.nomeCompleto);
-                        }
-
-                        if (alumno.suspensos === alumno.avaliados && alumno.avaliados > 0) {
-                            contadorSuspensos['todos']++;
-                            listaxesPorCategoria['todos'].push(alumno.nomeCompleto);
-                        }
-                    }
-                }
-
-                // Ordenar listaxes alfabeticamente
-                for (const categoria in listaxesPorCategoria) {
-                    listaxesPorCategoria[categoria].sort((a, b) => a.localeCompare(b, 'gl'));
-                }
-
-                // Ordenar módulos por nome
-                const modulosOrdenados = Object.keys(estadisticasModulos).sort((a, b) => a.localeCompare(b, 'gl'));
-
-                // Ordenar los módulos suspensos de cada alumno alfabéticamente
-                for (const doi in detallesAlumnos) {
-                    detallesAlumnos[doi].modulosSuspensos.sort((a, b) => a.modulo.localeCompare(b.modulo, 'gl'));
-                }
-
-                datosAnalise = {
-                    estadisticasModulos,
-                    datosPorAlumno,
-                    infoCiclo,
-                    contadorSuspensos,
-                    totalAlumnos,
-                    totalModulosAvaliados,
-                    listaxesPorCategoria,
-                    modulosOrdenados,
-                    detallesAlumnos
-                };
-
-                informesContainer.style.display = 'block';
-                mensaxeInicial.style.display = 'none';
-                document.getElementById('exportarActaBtn').disabled = false;
-
-                document.getElementById('informeModulos').innerHTML = xerarInformeModulos(estadisticasModulos);
-                document.getElementById('informeAlumnado').innerHTML = xerarInformeAlumnado(datosAnalise);
-                document.getElementById('listadoAlumnos').innerHTML = xerarListadoAlumnos(datosAnalise);
-
-                inicializarDataTableModulos();
-                inicializarDataTableListadoAlumnos();
-                tabButtons[0].click();
-            }
-
-            function inicializarDataTableModulos() {
-                if (dataTableModulos) {
-                    dataTableModulos.destroy();
-                }
-
-                const tablaModulos = document.querySelector('#informeModulos table');
-                if (tablaModulos) {
-                    dataTableModulos = $(tablaModulos).DataTable({
-                        "searching": false,
-                        "lengthChange": false,
-                        "paging": false,
-                        "info": false,
-                        "dom": 't',
-                        order: [[0, 'asc']]
-                    });
-                }
-            }
-
-            function inicializarDataTableListadoAlumnos() {
-                if (dataTableListadoAlumnos) {
-                    dataTableListadoAlumnos.destroy();
-                }
-
-                const tablaAlumnos = document.querySelector('#listadoAlumnos table.alumnos-table');
-                if (tablaAlumnos) {
-                    dataTableListadoAlumnos = $(tablaAlumnos).DataTable({
-                        "searching": true,
-                        "lengthChange": true,
-                        "paging": true,
-                        "info": true,
-                        "pageLength": 10,
-                        "language": {
-                            "search": "Buscar:",
-                            "lengthMenu": "Mostrar _MENU_ alumnos",
-                            "info": "Mostrando _START_ a _END_ de _TOTAL_ alumnos",
-                            "paginate": {
-                                "first": "Primeira",
-                                "last": "Última",
-                                "next": "Seguinte",
-                                "previous": "Anterior"
-                            }
-                        },
-                        order: [[0, 'asc']]
-                    });
-                }
-            }
-
-            function xerarInformeModulos(estadisticas) {
-                let tablaHTML = `<div class="table-container">
-                    <table class="summary-table">
-                        <thead>
-                            <tr><th>Módulo</th><th>Matriculados</th><th>Avaliados</th><th>Aprobados</th><th>% Aprobados</th><th>Suspensos</th><th>% Suspensos</th></tr>
-                        </thead>
-                        <tbody>`;
-                for (const materia in estadisticas) {
-                    const stats = estadisticas[materia];
-                    const porcAprobados = stats.avaliados > 0 ? (stats.aprobados / stats.avaliados * 100).toFixed(2) : "0.00";
-                    const porcSuspensos = stats.avaliados > 0 ? (stats.suspensos / stats.avaliados * 100).toFixed(2) : "0.00";
-                    tablaHTML += `<tr><td class="left-align-cell">${materia}</td><td>${stats.matriculados}</td><td>${stats.avaliados}</td><td>${stats.aprobados}</td><td>${porcAprobados}%</td><td>${stats.suspensos}</td><td>${porcSuspensos}%</td></tr>`;
-                }
-                return tablaHTML + `</tbody></table></div>`;
-            }
-
-            function xerarInformeAlumnado(datos) {
-                const { contadorSuspensos, totalAlumnos, listaxesPorCategoria } = datos;
-                const porcentaxes = {};
-                for (const key in contadorSuspensos) {
-                    porcentaxes[key] = totalAlumnos > 0 ? ((contadorSuspensos[key] / totalAlumnos) * 100).toFixed(2) : '0.00';
-                }
-
-                let html = `<div class="table-container">
-                    <table class="summary-table">
-                        <thead><tr><th>Situación do Alumnado</th><th>Nº</th><th>%</th><th>Listaxe</th></tr></thead>
-                        <tbody>
-                            <tr><td class="left-align-cell">TODAS APROBADAS</td><td>${contadorSuspensos[0]}</td><td>${porcentaxes[0]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[0].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
-                            <tr><td class="left-align-cell">1 SUSPENSA</td><td>${contadorSuspensos[1]}</td><td>${porcentaxes[1]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[1].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
-                            <tr><td class="left-align-cell">2 SUSPENSAS</td><td>${contadorSuspensos[2]}</td><td>${porcentaxes[2]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[2].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
-                            <tr><td class="left-align-cell">3 SUSPENSAS</td><td>${contadorSuspensos[3]}</td><td>${porcentaxes[3]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[3].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
-                            <tr><td class="left-align-cell">4 SUSPENSAS</td><td>${contadorSuspensos[4]}</td><td>${porcentaxes[4]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[4].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
-                            <tr><td class="left-align-cell">5+ SUSPENSAS</td><td>${contadorSuspensos['5+']}</td><td>${porcentaxes['5+']}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria['5+'].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
-                            <tr><td class="left-align-cell">TODAS SUSPENSAS</td><td>${contadorSuspensos['todos']}</td><td>${porcentaxes['todos']}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria['todos'].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
-                            <tr style="background:#f0f0f0; font-weight:bold;"><td class="left-align-cell">TOTAL ALUMNOS</td><td>${totalAlumnos}</td><td>100%</td><td>-</td></tr>
-                        </tbody>
-                    </table>
-                </div>`;
-                return html;
-            }
-
-
-
-
-            // Nueva función: Generar listado detallado de alumnos con módulos suspensos
-            function xerarListadoAlumnos(datos) {
-                const { detallesAlumnos, totalAlumnos } = datos;
-                
-                if (!detallesAlumnos || Object.keys(detallesAlumnos).length === 0) {
-                    return '<p>Non hai datos de alumnos dispoñibles.</p>';
-                }
-                
-                let html = `
-                    <div style="margin-bottom: 15px;">
-                        <p><strong>Total de alumnos:</strong> ${totalAlumnos}</p>
-                        <p><strong>Alumnado con módulos suspensos:</strong> ${Object.values(detallesAlumnos).filter(a => a.modulosSuspensos.length > 0).length}</p>
-                    </div>
-                    <div class="table-container">
-                        <table class="alumnos-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Alumno/a</th>
-                                    <th>Módulos Suspensos</th>
-                                    <th>Nº Suspensos</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
-                
-                let index = 1;
-                // Ordenar alumnos alfabéticamente por nombre
-                const alumnosOrdenados = Object.values(detallesAlumnos).sort((a, b) => a.nomeCompleto.localeCompare(b.nomeCompleto, 'gl'));
-                
-                for (const alumno of alumnosOrdenados) {
-                    const moduloItems = alumno.modulosSuspensos.map(m => 
-                        `<div class="modulo-suspenso"><span class="suspenso-badge">⚠️ ${m.modulo}</span> - Nota: ${m.nota}</div>`
-                    ).join('');
-                    
-                    const numSuspensos = alumno.modulosSuspensos.length;
-                    const estadoClase = numSuspensos === 0 ? 'badge-aprobado' : '';
-                    const estadoTexto = numSuspensos === 0 ? '✅ Todas aprobadas' : 
-    `${numSuspensos} suspenso${numSuspensos !== 1 ? 's' : ''} 
-    <br><button class="btn-generar-informe" data-alumno='${JSON.stringify(alumno).replace(/'/g, "&#39;")}'>📄 Informe</button>`;
-    
-                    html += `
-                        <tr>
-                            <td style="text-align: center;">${index++}</td>
-                            <td><strong>${alumno.nomeCompleto}</strong></td>
-                            <td>
-                                ${moduloItems || '<span class="badge-aprobado">✓ Ningún módulo suspenso</span>'}
-                            </td>
-                            <td style="text-align: center;" class="${estadoClase}">
-                                ${estadoTexto}
-                            </td>
-                        </tr>
-                    `;
-                }
-                
-                html += `
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-                
-                return html;
-            }
-
-
         // Event listener delegado (fuera del bucle)
         document.addEventListener('click', function(e) {
             if (e.target.classList.contains('btn-generar-informe')) {
@@ -1186,10 +689,6 @@ async function generarPDFInforme(datosAlumno) {
                 generarInformeIndividualizado(alumno);
             }
         });
-
-
-
-
 
 
 
@@ -1347,6 +846,429 @@ async function generarPDFInforme(datosAlumno) {
 
         });
     </script>
+
+
+<script>
+
+
+// ============================================================
+// INICIALIZAR DATATABLES
+// ============================================================
+function inicializarDataTableModulos() {
+    if (dataTableModulos) {
+        dataTableModulos.destroy();
+    }
+
+    const tablaModulos = document.querySelector('#informeModulos table');
+    if (tablaModulos) {
+        dataTableModulos = $(tablaModulos).DataTable({
+            "searching": false,
+            "lengthChange": false,
+            "paging": false,
+            "info": false,
+            "dom": 't',
+            order: [[0, 'asc']]
+        });
+    }
+}
+
+function inicializarDataTableListadoAlumnos() {
+        if (dataTableListadoAlumnos) {
+            dataTableListadoAlumnos.destroy();
+        }
+
+        const tablaAlumnos = document.querySelector('#listadoAlumnos table.alumnos-table');
+        if (tablaAlumnos) {
+            dataTableListadoAlumnos = $(tablaAlumnos).DataTable({
+                "searching": true,
+                "lengthChange": true,
+                "paging": true,
+                "info": true,
+                "pageLength": 10,
+                "language": {
+                    "search": "Buscar:",
+                    "lengthMenu": "Mostrar _MENU_ alumnos",
+                    "info": "Mostrando _START_ a _END_ de _TOTAL_ alumnos",
+                    "paginate": {
+                        "first": "Primeira",
+                        "last": "Última",
+                        "next": "Seguinte",
+                        "previous": "Anterior"
+                    }
+                },
+                order: [[0, 'asc']]
+            });
+        }
+    }
+
+
+// ============================================================
+// FUNCIÓN PRINCIPAL DE PROCESAMIENTO DEL CSV
+// ============================================================
+function procesarContidoCSV(contenido) {
+    // Inicializar estructuras
+    const estadisticasModulos = {};
+    const datosPorAlumno = {};
+    const detallesAlumnos = {};
+    const lineas = contenido.split('\n').filter(linea => linea.trim() !== '');
+
+    if (lineas.length < 2) {
+        mensaxeInicial.innerHTML = "<p>O ficheiro está baleiro ou só contén a cabeceira.</p>";
+        return;
+    }
+
+    // 1. PARSEAR CABECERA
+    const cabecera = lineas[0].split(';').map(h => h.replace(/^"|"$/g, '').trim());
+    const idxDoi = cabecera.indexOf('Nº DOI');
+    const idxApelido1 = cabecera.indexOf('1º APELIDO');
+    const idxApelido2 = cabecera.indexOf('2º APELIDO');
+    const idxNome = cabecera.indexOf('NOME');
+    const idxAvaliacion = cabecera.indexOf('Nº AVALIACIÓN');
+    const idxMateria = cabecera.indexOf('MATERIA');
+    const idxCualificacion = cabecera.indexOf('CUALIFICACIÓN');
+    const idxCurso = cabecera.indexOf('CURSO');
+    const idxRegimen = cabecera.indexOf('RÉXIME');
+    const idxAnoAcademico = cabecera.indexOf('ANO ACADÉMICO ACTUAL');
+
+    // Validar columnas esenciales
+    if ([idxDoi, idxNome, idxMateria, idxCualificacion, idxApelido1, idxApelido2, idxCurso].includes(-1)) {
+        mensaxeInicial.innerHTML = `<p style="color:red;"><b>Erro:</b> Faltan columnas esenciais no ficheiro CSV.</p>`;
+        return;
+    }
+
+    // 2. PROCESAR FILAS DE DATOS
+    let primeraFila = true;
+    
+    for (const linea of lineas.slice(1)) {
+        const campos = linea.split(';').map(c => c.replace(/^"|"$/g, '').trim());
+        const doi = campos[idxDoi];
+        const materia = campos[idxMateria];
+        const cualificacionStr = campos[idxCualificacion];
+
+        if (!doi || !materia) continue;
+
+        // --- Extraer datos comunes del ciclo (solo en la primera fila válida) ---
+        if (primeraFila) {
+            datosCSV.curso = campos[idxCurso] || '';
+            datosCSV.regimen = campos[idxRegimen] || '';
+            datosCSV.anoAcademico = campos[idxAnoAcademico] || '';
+            
+            // Determinar tipo de avaliación
+            if (avaliacion == null) {
+                const numAval = campos[idxAvaliacion];
+                if (numAval) {
+                    switch (numAval[0]) {
+                        case "1": avaliacion = "1ª AVALIACIÓN"; break;
+                        case "2": avaliacion = "2ª AVALIACIÓN"; break;
+                        case "3": avaliacion = "3ª AVALIACIÓN"; break;
+                        default: avaliacion = "AVALIACIÓN FINAL";
+                    }
+                    datosCSV.avaliacion = avaliacion;
+                }
+            }
+            primeraFila = false;
+        }
+
+        // --- Inicializar estadísticas de módulos ---
+        if (!estadisticasModulos[materia]) {
+            estadisticasModulos[materia] = { 
+                matriculados: 0, 
+                avaliados: 0, 
+                aprobados: 0, 
+                suspensos: 0 
+            };
+        }
+        estadisticasModulos[materia].matriculados++;
+
+        // --- Inicializar datos del alumno ---
+        if (!datosPorAlumno[doi]) {
+            const apelidos = [campos[idxApelido1], campos[idxApelido2]].filter(Boolean).join(' ');
+            const nomeCompleto = apelidos ? `${apelidos}, ${campos[idxNome]}` : campos[idxNome];
+            
+            datosPorAlumno[doi] = { 
+                nomeCompleto, 
+                suspensos: 0, 
+                avaliados: 0 
+            };
+            
+            detallesAlumnos[doi] = { 
+                nomeCompleto, 
+                doi: doi,
+                modulosSuspensos: [], 
+                todasNotas: [] 
+            };
+            
+            // Guardar también en la estructura centralizada
+            datosCSV.alumnos[doi] = {
+                nomeCompleto,
+                apelidos,
+                nome: campos[idxNome],
+                doi: doi,
+                modulosSuspensos: [],
+                todasNotas: []
+            };
+        }
+
+        // --- Procesar calificación ---
+        let notaValida = false;
+        let nota = null;
+        let isSuspenso = false;
+        let notaTexto = cualificacionStr;
+        
+        if (cualificacionStr && cualificacionStr.toLowerCase() !== 'sen cualificar' && cualificacionStr !== '') {
+            if (cualificacionStr.toUpperCase() === 'PD') {
+                notaValida = true;
+                isSuspenso = true;
+                notaTexto = 'PD';
+            } else {
+                nota = parseInt(cualificacionStr, 10);
+                if (!isNaN(nota)) {
+                    notaValida = true;
+                    isSuspenso = nota < 5;
+                }
+            }
+            
+            if (notaValida) {
+                estadisticasModulos[materia].avaliados++;
+                
+                if (!isSuspenso) {
+                    estadisticasModulos[materia].aprobados++;
+                } else {
+                    estadisticasModulos[materia].suspensos++;
+                }
+                
+                datosPorAlumno[doi].avaliados++;
+                
+                if (isSuspenso) {
+                    datosPorAlumno[doi].suspensos++;
+                    // Almacenar en ambas estructuras
+                    const moduloSuspenso = { modulo: materia, nota: notaTexto };
+                    detallesAlumnos[doi].modulosSuspensos.push(moduloSuspenso);
+                    datosCSV.alumnos[doi].modulosSuspensos.push(moduloSuspenso);
+                }
+                
+                const notaInfo = { modulo: materia, nota: notaTexto, suspenso: isSuspenso };
+                detallesAlumnos[doi].todasNotas.push(notaInfo);
+                datosCSV.alumnos[doi].todasNotas.push(notaInfo);
+            }
+        }
+    }
+
+    // 3. CALCULAR ESTADÍSTICAS DE SUSPENSOS
+    const contadorSuspensos = {
+        0: 0, 1: 0, 2: 0, 3: 0, 4: 0, '5+': 0, 'todos': 0
+    };
+    const listaxesPorCategoria = {
+        0: [], 1: [], 2: [], 3: [], 4: [], '5+': [], 'todos': []
+    };
+    let totalAlumnos = 0;
+    let totalModulosAvaliados = 0;
+
+    for (const doi in datosPorAlumno) {
+        const alumno = datosPorAlumno[doi];
+        totalAlumnos++;
+        totalModulosAvaliados += alumno.avaliados;
+
+        if (alumno.avaliados > 0) {
+            let categoria;
+            if (alumno.suspensos === 0) categoria = 0;
+            else if (alumno.suspensos === 1) categoria = 1;
+            else if (alumno.suspensos === 2) categoria = 2;
+            else if (alumno.suspensos === 3) categoria = 3;
+            else if (alumno.suspensos === 4) categoria = 4;
+            else categoria = '5+';
+            
+            contadorSuspensos[categoria]++;
+            listaxesPorCategoria[categoria].push(alumno.nomeCompleto);
+
+            if (alumno.suspensos === alumno.avaliados) {
+                contadorSuspensos['todos']++;
+                listaxesPorCategoria['todos'].push(alumno.nomeCompleto);
+            }
+        }
+    }
+
+    // 4. ORDENAR LISTAS
+    for (const categoria in listaxesPorCategoria) {
+        listaxesPorCategoria[categoria].sort((a, b) => a.localeCompare(b, 'gl'));
+    }
+    for (const doi in detallesAlumnos) {
+        detallesAlumnos[doi].modulosSuspensos.sort((a, b) => a.modulo.localeCompare(b.modulo, 'gl'));
+        datosCSV.alumnos[doi].modulosSuspensos.sort((a, b) => a.modulo.localeCompare(b.modulo, 'gl'));
+    }
+
+    const modulosOrdenados = Object.keys(estadisticasModulos).sort((a, b) => a.localeCompare(b, 'gl'));
+
+    // 5. ACTUALIZAR ESTRUCTURA GLOBAL
+    datosAnalise = {
+        estadisticasModulos,
+        datosPorAlumno,
+        infoCiclo: {
+            nome: '',
+            curso: datosCSV.curso
+        },
+        contadorSuspensos,
+        totalAlumnos,
+        totalModulosAvaliados,
+        listaxesPorCategoria,
+        modulosOrdenados,
+        detallesAlumnos
+    };
+
+    // 6. MOSTRAR RESULTADOS
+    informesContainer.style.display = 'block';
+    mensaxeInicial.style.display = 'none';
+    document.getElementById('exportarActaBtn').disabled = false;
+
+    document.getElementById('informeModulos').innerHTML = xerarInformeModulos(estadisticasModulos);
+    document.getElementById('informeAlumnado').innerHTML = xerarInformeAlumnado(datosAnalise);
+    document.getElementById('listadoAlumnos').innerHTML = xerarListadoAlumnos(datosAnalise);
+
+    inicializarDataTableModulos();
+    inicializarDataTableListadoAlumnos();
+    //tabButtons[0].click();
+
+    // Mostrar información adicional en consola (para depuración)
+    console.log('📊 Datos CSV procesados:');
+    console.log('  - Curso:', datosCSV.curso);
+    console.log('  - Réxime:', datosCSV.regimen);
+    console.log('  - Ano Académico:', datosCSV.anoAcademico);
+    console.log('  - Avaliación:', datosCSV.avaliacion);
+    console.log('  - Total alumnos:', totalAlumnos);
+    console.log('  - Módulos:', modulosOrdenados.length);
+}
+
+// ============================================================
+// FUNCIÓN PARA OBTENER DATOS DEL CSV (UTILIDAD)
+// ============================================================
+function obtenerDatosCSV() {
+    return {
+        ...datosCSV,
+        // Métodos de utilidad
+        getAlumno: (doi) => datosCSV.alumnos[doi],
+        getAlumnosConSuspensos: () => {
+            return Object.values(datosCSV.alumnos).filter(a => a.modulosSuspensos.length > 0);
+        },
+        getAlumnosAprobados: () => {
+            return Object.values(datosCSV.alumnos).filter(a => a.modulosSuspensos.length === 0);
+        },
+        getTotalAlumnos: () => Object.keys(datosCSV.alumnos).length
+    };
+}
+
+
+// ============================================================
+// XERAR INFORMES
+// ============================================================
+
+function xerarInformeModulos(estadisticas) {
+    let tablaHTML = `<div class="table-container">
+        <table class="summary-table">
+            <thead>
+                <tr><th>Módulo</th><th>Matriculados</th><th>Avaliados</th><th>Aprobados</th><th>% Aprobados</th><th>Suspensos</th><th>% Suspensos</th></tr>
+            </thead>
+            <tbody>`;
+    for (const materia in estadisticas) {
+        const stats = estadisticas[materia];
+        const porcAprobados = stats.avaliados > 0 ? (stats.aprobados / stats.avaliados * 100).toFixed(2) : "0.00";
+        const porcSuspensos = stats.avaliados > 0 ? (stats.suspensos / stats.avaliados * 100).toFixed(2) : "0.00";
+        tablaHTML += `<tr><td class="left-align-cell">${materia}</td><td>${stats.matriculados}</td><td>${stats.avaliados}</td><td>${stats.aprobados}</td><td>${porcAprobados}%</td><td>${stats.suspensos}</td><td>${porcSuspensos}%</td></tr>`;
+    }
+    return tablaHTML + `</tbody></table></div>`;
+}
+
+function xerarInformeAlumnado(datos) {
+    const { contadorSuspensos, totalAlumnos, listaxesPorCategoria } = datos;
+    const porcentaxes = {};
+    for (const key in contadorSuspensos) {
+        porcentaxes[key] = totalAlumnos > 0 ? ((contadorSuspensos[key] / totalAlumnos) * 100).toFixed(2) : '0.00';
+    }
+
+    let html = `<div class="table-container">
+        <table class="summary-table">
+            <thead><tr><th>Situación do Alumnado</th><th>Nº</th><th>%</th><th>Listaxe</th></tr></thead>
+            <tbody>
+                <tr><td class="left-align-cell">TODAS APROBADAS</td><td>${contadorSuspensos[0]}</td><td>${porcentaxes[0]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[0].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                <tr><td class="left-align-cell">1 SUSPENSA</td><td>${contadorSuspensos[1]}</td><td>${porcentaxes[1]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[1].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                <tr><td class="left-align-cell">2 SUSPENSAS</td><td>${contadorSuspensos[2]}</td><td>${porcentaxes[2]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[2].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                <tr><td class="left-align-cell">3 SUSPENSAS</td><td>${contadorSuspensos[3]}</td><td>${porcentaxes[3]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[3].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                <tr><td class="left-align-cell">4 SUSPENSAS</td><td>${contadorSuspensos[4]}</td><td>${porcentaxes[4]}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria[4].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                <tr><td class="left-align-cell">5+ SUSPENSAS</td><td>${contadorSuspensos['5+']}</td><td>${porcentaxes['5+']}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria['5+'].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                <tr><td class="left-align-cell">TODAS SUSPENSAS</td><td>${contadorSuspensos['todos']}</td><td>${porcentaxes['todos']}%</td><td class="left-align-cell"><div class="listaxe-alumnado">${listaxesPorCategoria['todos'].map(n => `• ${n}`).join('<br>') || '-'}</div></td></tr>
+                <tr style="background:#f0f0f0; font-weight:bold;"><td class="left-align-cell">TOTAL ALUMNOS</td><td>${totalAlumnos}</td><td>100%</td><td>-</td></tr>
+            </tbody>
+        </table>
+    </div>`;
+    return html;
+}
+
+
+// Nueva función: Generar listado detallado de alumnos con módulos suspensos
+function xerarListadoAlumnos(datos) {
+    const { detallesAlumnos, totalAlumnos } = datos;
+    
+    if (!detallesAlumnos || Object.keys(detallesAlumnos).length === 0) {
+        return '<p>Non hai datos de alumnos dispoñibles.</p>';
+    }
+    
+    let html = `
+        <div style="margin-bottom: 15px;">
+            <p><strong>Total de alumnos:</strong> ${totalAlumnos}</p>
+            <p><strong>Alumnado con módulos suspensos:</strong> ${Object.values(detallesAlumnos).filter(a => a.modulosSuspensos.length > 0).length}</p>
+        </div>
+        <div class="table-container">
+            <table class="alumnos-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Alumno/a</th>
+                        <th>Módulos Suspensos</th>
+                        <th>Nº Suspensos</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    let index = 1;
+    // Ordenar alumnos alfabéticamente por nombre
+    const alumnosOrdenados = Object.values(detallesAlumnos).sort((a, b) => a.nomeCompleto.localeCompare(b.nomeCompleto, 'gl'));
+    
+    for (const alumno of alumnosOrdenados) {
+        const moduloItems = alumno.modulosSuspensos.map(m => 
+            `<div class="modulo-suspenso"><span class="suspenso-badge">⚠️ ${m.modulo}</span> - Nota: ${m.nota}</div>`
+        ).join('');
+        
+        const numSuspensos = alumno.modulosSuspensos.length;
+        const estadoClase = numSuspensos === 0 ? 'badge-aprobado' : '';
+        const estadoTexto = numSuspensos === 0 ? '✅ Todas aprobadas' : 
+`${numSuspensos} suspenso${numSuspensos !== 1 ? 's' : ''} 
+<br><button class="btn-generar-informe" data-alumno='${JSON.stringify(alumno).replace(/'/g, "&#39;")}'>📄 Informe</button>`;
+
+        html += `
+            <tr>
+                <td style="text-align: center;">${index++}</td>
+                <td><strong>${alumno.nomeCompleto}</strong></td>
+                <td>
+                    ${moduloItems || '<span class="badge-aprobado">✓ Ningún módulo suspenso</span>'}
+                </td>
+                <td style="text-align: center;" class="${estadoClase}">
+                    ${estadoTexto}
+                </td>
+            </tr>
+        `;
+    }
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    return html;
+}
+
+
+</script>
 </body>
 
 </html>
