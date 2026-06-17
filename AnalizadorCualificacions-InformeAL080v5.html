@@ -480,13 +480,14 @@ async function generarInformeIndividualizado(alumno) {
         const partesNombre = alumno.nomeCompleto.trim().split(',');
         const nombre = partesNombre[1] || '';
         const apellidos = partesNombre[0] || '';
+        const modulos = alumno.modulosSuspensos;
         
 
         // Crear nombre para el archivo: Apellidos_Nombre
         const nombreArchivo = `${apellidos.replace(/\s/g, '_')}_${nombre}`;
         
         // Ruta de la plantilla
-        const rutaPlantilla = 'GenerarODT-DOC/Informe_Individualizado-ALUMNO.pdf';
+        const rutaPlantilla = `GenerarODT-DOC/Informe_Individualizado-ALUMNO-${modulos.length}MOD.pdf`;
         
         // Cargar el archivo de plantilla
         const respuesta = await fetch(rutaPlantilla);
@@ -506,19 +507,37 @@ async function generarInformeIndividualizado(alumno) {
         
         // Verificar que los campos existen y rellenarlos
         try {
+            // DATOS GLOBAIS
+            const dataRaw = document.getElementById('dataActa').value;
+            const dataFormateada = dataRaw ? new Date(dataRaw).toLocaleDateString('gl-ES', { year: 'numeric', month: 'long', day: 'numeric' }) : new Date().toLocaleDateString('gl-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+            const titor = document.getElementById('titorActa').value;
+
+            // DATOS CICLO
             form.getTextField('frmCiclo').setText(datosCSV.curso);
             form.getTextField('frmRexime').setText(datosCSV.regimen);
             form.getTextField('frmAnoAcademico').setText(datosCSV.anoAcademico);
             form.getTextField('frmGrupo').setText('A');
-            form.getTextField('frmFecha').setText(document.getElementById('dataActa').value);
-            form.getTextField('frmTitor').setText(document.getElementById('titorActa').value);
+            form.getTextField('frmFecha').setText(dataFormateada);
+            form.getTextField('frmTitor').setText(titor);
 
-
+            // DATOS ALUMNO
             form.getTextField('frmNombre').setText(nombre);
             form.getTextField('frmApelidos').setText(apellidos);
             form.getTextField('frmDNI').setText(alumno.doi);
+
+            // DATOS MÓDULOS SUSPENSOS
+            for (let i = 0; i < modulos.length; i++) {
+                //campo.enableReadOnly(); Si se quiere hacer un campo de sólo lectura
+                form.getTextField(`frmModNombre${i}`).setText(modulos[i].modulo);
+                form.getTextField(`frmModConvocatoria${i}`).setText('1ª');
+                form.getTextField(`frmModCualificacion${i}`).setText(modulos[i].nota);
+                form.getTextField(`frmModValoracion${i}`).setText('Non acadou os mínimos esixibles.');
+                form.getTextField(`frmModActividades${i}`).setText('Repasar contidos teóricos e realizar exercicios e prácticas propostos durante o curso.');
+                form.getTextField(`frmModMedidas${i}`).setText('Non procede.');
+            }
         } catch (error) {
-            console.warn('⚠️ Campo frmNombre no encontrado en la plantilla');
+            console.warn('⚠️ Campo  no encontrado en la plantilla');
+            console.log(error);
         }
                 
         // Guardar el PDF rellenado
@@ -644,6 +663,7 @@ async function generarInformeIndividualizado(alumno) {
             const mensaxeInicial = document.getElementById('mensaxeInicial');
             const tabButtons = document.querySelectorAll('.tab-btn');
             const tabContents = document.querySelectorAll('.tab-content');
+
 
             // Análise automática cando se selecciona un ficheiro
             csvFileInput.addEventListener('change', (event) => {
