@@ -300,7 +300,7 @@
 
         /* INFORMES INDIVIDUALIZADOS */
         /* Estilos para el botón pequeño */
-        .btn-generar-informe {
+        .btn-generar-informe, .btn-generar-informes {
             background: #4CAF50;
             color: white;
             border: none;
@@ -312,10 +312,10 @@
             font-family: Arial, sans-serif;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .btn-generar-informe:hover {
+        .btn-generar-informe:hover, .btn-generar-informes:hover {
             background: #45a049;
         }
-        .btn-generar-informe:active {
+        .btn-generar-informe:active, .btn-generar-informes:active {
             transform: scale(0.97);
         }
 
@@ -568,6 +568,100 @@ async function generarInformeIndividualizado(alumno) {
         console.error('❌ Error al generar el informe:', error);
         alert(`Error al generar el informe: ${error.message}`);
         return false;
+    }
+}
+
+
+/**
+ * Genera informes para todos los alumnos con módulos suspensos
+ */
+async function generarTodosLosInformes(alumnosSuspensos) {
+
+    
+    // Confirmar con el usuario
+    const confirmar = confirm(
+        `⚠️ Se van a generar ${alumnosSuspensos.length} informes para alumnos con módulos suspensos.\n\n` +
+        `¿Deseas continuar?`
+    );
+    
+    if (!confirmar) {
+        return;
+    }
+    
+    // Deshabilitar botones durante la generación
+    const btnGenerarTodos = document.getElementById('btnGenerarTodos');
+    btnGenerarTodos.disabled = true;
+    btnGenerarTodos.textContent = '⏳ Generando...';
+    
+    const estadoGeneracion = document.getElementById('estadoGeneracion');
+    estadoGeneracion.innerHTML = '⏳ Generando informes...';
+    estadoGeneracion.style.color = 'orange';
+    
+    let generados = 0;
+    let errores = 0;
+    const erroresLista = [];
+    
+    try {
+        // Generar informes uno por uno
+        for (let i = 0; i < alumnosSuspensos.length; i++) {
+            const alumno = alumnosSuspensos[i];
+            
+            // Actualizar estado
+            estadoGeneracion.innerHTML = `⏳ Generando informe ${i + 1} de ${alumnosSuspensos.length}: ${alumno.nomeCompleto}`;
+            
+            try {
+                // Generar el informe individual
+                const resultado = await generarInformeIndividualizado(alumno); 
+                
+                if (resultado) {
+                    generados++;
+                } else {
+                    errores++;
+                    erroresLista.push(alumno.nomeCompleto);
+                }
+                
+                // Pequeña pausa para no sobrecargar el navegador
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+            } catch (error) {
+                console.error(`❌ Error con ${alumno.nomeCompleto}:`, error);
+                errores++;
+                erroresLista.push(alumno.nomeCompleto);
+            }
+        }
+        
+        // Mostrar resultado final
+        let mensaje = `✅ Informes generados: ${generados} de ${alumnosSuspensos.length}`;
+        
+        if (errores > 0) {
+            mensaje += `\n❌ Errores: ${errores}`;
+            if (erroresLista.length > 0) {
+                mensaje += `\n\nAlumnos con error:\n${erroresLista.map(n => `- ${n}`).join('\n')}`;
+            }
+            estadoGeneracion.innerHTML = `⚠️ Completado con errores: ${generados} generados, ${errores} errores`;
+            estadoGeneracion.style.color = 'orange';
+        } else {
+            estadoGeneracion.innerHTML = `✅ Todos los informes generados correctamente (${generados})`;
+            estadoGeneracion.style.color = 'green';
+        }
+        
+        alert(mensaje);
+        
+    } catch (error) {
+        console.error('❌ Error general:', error);
+        estadoGeneracion.innerHTML = '❌ Error al generar los informes';
+        estadoGeneracion.style.color = 'red';
+        alert('Error al generar los informes: ' + error.message);
+        
+    } finally {
+        // Rehabilitar botón
+        btnGenerarTodos.disabled = false;
+        btnGenerarTodos.textContent = '📚 Generar Todos los Informes';
+        
+        // Si no hay alumnos suspensos, deshabilitar
+        if (alumnosSuspensos.length === 0) {
+            btnGenerarTodos.disabled = true;
+        }
     }
 }
 
@@ -1232,10 +1326,24 @@ function xerarListadoAlumnos(datos) {
         return '<p>Non hai datos de alumnos dispoñibles.</p>';
     }
     
+
+
     let html = `
         <div style="margin-bottom: 15px;">
-            <p><strong>Total de alumnos:</strong> ${totalAlumnos}</p>
-            <p><strong>Alumnado con módulos suspensos:</strong> ${Object.values(detallesAlumnos).filter(a => a.modulosSuspensos.length > 0).length}</p>
+            <p><strong>Total de alumnos:</strong> ${totalAlumnos}</p>`;
+    
+    const alumnosConSuspensos = Object.values(detallesAlumnos).filter(a => a.modulosSuspensos.length > 0);
+    if (alumnosConSuspensos.length === 0) {
+        html += '<p>Todos os alumnos aprobaron todas as materias.</p>';
+    } else {
+       html += `<p><strong>Alumnado con módulos suspensos:</strong> ${alumnosConSuspensos.length}
+                <button onclick="generarTodosLosInformes(${alumnosConSuspensos})" class="btn-generar-informes" id="btnGenerarTodos">
+            📄 Generar Informes Individualizados
+            </button>
+            </p>`; 
+    }
+
+    html += `
         </div>
         <div class="table-container">
             <table class="alumnos-table">
