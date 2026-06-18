@@ -901,22 +901,11 @@ function inicializarDataTableListadoAlumnos() {
         const tablaAlumnos = document.querySelector('#listadoAlumnos table.alumnos-table');
         if (tablaAlumnos) {
             dataTableListadoAlumnos = $(tablaAlumnos).DataTable({
-                "searching": true,
-                "lengthChange": true,
-                "paging": true,
-                "info": true,
+                "searching": false,
+                "lengthChange": false,
+                "paging": false,
+                "info": false,
                 "pageLength": 10,
-                "language": {
-                    "search": "Buscar:",
-                    "lengthMenu": "Mostrar _MENU_ alumnos",
-                    "info": "Mostrando _START_ a _END_ de _TOTAL_ alumnos",
-                    "paginate": {
-                        "first": "Primeira",
-                        "last": "Última",
-                        "next": "Seguinte",
-                        "previous": "Anterior"
-                    }
-                },
                 order: [[0, 'asc']]
             });
         }
@@ -1147,7 +1136,6 @@ function procesarContidoCSV(contenido) {
 
     inicializarDataTableModulos();
     inicializarDataTableListadoAlumnos();
-    //tabButtons[0].click();
 
     // Mostrar información adicional en consola (para depuración)
     console.log('📊 Datos CSV procesados:');
@@ -1241,7 +1229,6 @@ function xerarListadoAlumnos(datos) {
             <table class="alumnos-table">
                 <thead>
                     <tr>
-                        <th>#</th>
                         <th>Alumno/a</th>
                         <th>Módulos Suspensos</th>
                         <th>Nº Suspensos</th>
@@ -1267,7 +1254,6 @@ function xerarListadoAlumnos(datos) {
 
         html += `
             <tr>
-                <td style="text-align: center;">${index++}</td>
                 <td><strong>${alumno.nomeCompleto}</strong></td>
                 <td>
                     ${moduloItems || '<span class="badge-aprobado">✓ Ningún módulo suspenso</span>'}

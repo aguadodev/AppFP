@@ -61,7 +61,10 @@ MELLORAS A REALIZAR
 - INFORME DE AVALIACIÓN: Obtén o número de avaliación apra o informe.
 
 
-
+2026/06/19 - Informes individualizados
+- Generados sobre plantillas PDF con formularios editables
+- Pendiente Probar, desplegar y Generar todos los informes de una sola vez.
+- Pendiente Generar Acta de Avaliación con plantilla PDF??
 
 
 
