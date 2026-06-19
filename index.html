@@ -13,28 +13,42 @@
 <h1>AppFP</h1>
 <p>Ferramentas de apoio á titoría de Ciclos de FP e á labor docente en xeral.</p>
 <ul>
-    <li>Funciona localmente. Non require acceso a Internet e Non envía os datos analizados a ningún outro equipo.</li>
+    <li>Utiliza os datos sensibles no navegador local, sen envialos a Internet nin a ningún outro equipo.</li>
     <li>Usar baixo a propia responsabilidade</li>
     <li>Repositorio público en GitHub: <a href="https://github.com/aguadodev/AppFP">https://github.com/aguadodev/AppFP</a></li>
 </ul>
 
-<h2>Analizador de Cualificacións: Actas e Informes individualizados</h2>
-<p><a href="AnalizadorCualificacions-InformeAL080v5.html">AnalizadorCualificacions-InformeAL080.html</a></p>
-<p>Carga o ficheiro CSV resultante do Informe predefinido "AL080-Listaxe cualificacións"</p>
+<h2><a href="AnalizadorCualificacions-InformeAL080.html">
+    Analizador de Cualificacións</a>
+</h2>
 
-<p>Xera Acta de Avaliación</p>
-    <div class="info-footer">
-        <p>📄 Documento editable — Fai clic en calquera área amarela para modificar o texto</p>
-        <p>🖨️ Para imprimir, usa o botón "Imprimir" ou Ctrl+P</p>
-        <p>💾 Para gardar como ODT, abre este ficheiro con LibreOffice e selecciona "Gardar como" → "ODT"</p>
-    </div>
-
-<p>Xera Informes Individualizados</p>
-<p>En formato PDF con formularios editables.</p>
+<ul>
+    <li>Analiza os datos de avaliación e xera Actas e Informes individualizados.</li>
+    <li>Require o Informe predefinido do <a href="https://www.edu.xunta.gal/xade" target="_blank"></a>Xade</a> "AL080-Listaxe cualificacións"</li>
+    <li><strong>Acta de Avaliación:</strong> Xera un Documento HTML editable facendo clic en calquera área amarela.</li>
+    <li><strong>Informes Individualizados: </strong> Xera documentos PDF con campos de formulario editables.</li>
+</ul>
 
 
-<h2>Analizador de Faltas, Apercibimientos y PD</h2>
-<p>Proposta de proceso de xestión de faltas e apercibimentos.</p>
+
+<h2><a href="FaltasDetalladasYApercibimientos.html">
+    Analizador de Faltas, Apercibimientos y PD</a>
+</h2>
+
+<ul>
+    <li>Axuda a xestionar as faltas de asistencia, apercibimentos e comunicacións de perda de avaliación continua (PD).</li>
+    <li>Require o Informe predefinido do <a href="https://www.edu.xunta.gal/xade" target="_blank"></a>Xade</a> "AL030-Faltas detalladas" con
+        todas as faltas desde o inicio do curso. Pódese facer copy-paste do seu contido e o programa parseará e filtrará o contido para procesar só as faltas de asistencia non xustificadas.</li>
+    <li><strong>Módulos e Umbrais: </strong> Información extraída de Extraído de <a
+            href="https://www.edu.xunta.gal/fp/familias-profesionais">https://www.edu.xunta.gal/fp/familias-profesionais</a></li>
+    <li><strong>Faltas Detalladas</strong></li>
+    <li><strong>Táboa Resumen</strong></li>
+    <li><strong>Apercibimentos (6%)</strong></li>
+    <li><strong>Comunicacións PD (4% despois do acose do apercibimento)</strong></li>
+    <li><strong>Datos de Apercibimentos e Comunicacións de PD:</strong> O programa xera un ficheiro CSV con esta información para utilizar en futuras sesións.</li>
+</ul>
+
+<h3>Proposta de proceso de xestión de faltas e apercibimentos.</h3>
 <p>Realizar unha vez á semana na hora de titoría creando unha carpeta coa data do día en formato "aaaa-mm-dd"</p>
 <p>Cómpre ter actualizada a xustificación de faltas.</p>
 <ol>
@@ -42,57 +56,10 @@
     <li>Cargar Informe na <a href="FaltasDetalladasYApercibimientos.html" target="_blank">APP Faltas e Apercibimentos</a></li>
     <li>Cargar, se é o caso, apercibimentos previos.</li>
     <li>Se hai novos apercibimentos ou comunicacións de PD, xerar e gardar o arquivo de apercibimentos actualizado.</li>
-    <li>Xerar no Xade os informes de apercibimentos e comunicacións PD para o alumnado afectado no punto anterior. Gardar e imprimir</li>
+    <li>Xerar no Xade os informes de apercibimentos ("AL933-Apercibimento PD") e comunicacións PD para o alumnado afectado no punto anterior. Gardar e imprimir</li>
     <li>Deixar en secretaría para obter sinaturas e rexistro de saída.</li>
     <li>Notificar ao alumnado presencialmente ou vía Abalar (consultar manual de Amalia)</li>
-    <li><a href="Apercibimientos.html" target="_blank">Actualizar o arquivo de apercibimentos</a> coa data de acuse de recibo.</li>
-</ol>
-
-<p><strong>Entrada de Datos</strong></p>
-<ul>
-    <li><strong>DATOS - Módulos.csv</strong><br>
-        Datos de los módulos, número de horas anuales, etc. en formato CSV como el modelo que se adjunta.
-        Extraído de <a
-            href="https://www.edu.xunta.gal/fp/familias-profesionais">https://www.edu.xunta.gal/fp/familias-profesionais</a>
-    </li>
-    <li><strong>DATOS - Apercibimentos.csv</strong> (Opcional)<br>
-        Datos de Apercibimientos y Comunicaciones de PD en formato CSV como el modelo que se adjunta.<br>
-        Si no se aporta se puede omitir y utilizar la propia aplicación para generar y descargar un primer borrador en
-        el que luego sólo habrá que ajustar las fechas de informe y acuse.
-    </li>
-    <li><strong>FALTAS DETALLADAS</strong><br>
-        Contenido del Informe predefinido en PDF <strong>"AL030-Faltas detalladas"</strong> con
-        todas las faltas desde el inicio del curso (9/9/2026).
-        Se puede hacer un copy-paste "a lo bruto" del contenido del PDF en el cuadro de texto o cargar un fichero de
-        texto donde se haya guardado este contenido previamente.
-        La aplicación parseará y filtrará el contenido para procesar sólo las faltas de asistencia no justificadas.
-    </li>
-</ul>
-
-<h3>Salida de Datos</h3>
-<ol>
-    <li><strong>Módulos y Umbrales</strong><br>
-    </li>
-    <li><strong>Faltas Detalladas</strong><br>
-    </li>
-    <li><strong>Tabla Resumen</strong><br>
-    </li>
-    <li><strong>Apercibimientos (6%)</strong><br>
-    </li>
-    <li><strong>Comunicaciones PD (4%)</strong><br>
-    </li>
-    <li><strong>Informe para imprimir</strong><br>
-    </li>
-</ol>
-
-<h3>Acciones posteriores</h3>
-<ol>
-    <li><strong>Generar y tramitar el "AL933-Apercibimento PD" para el alumnado con nuevos apercibimientos.</strong><br>
-    </li>
-    <li><strong>Tramitar la Comunicación PD para el alumnado con nuevas comunicaciones PD.</strong><br>
-    </li>
-    <li><strong>Actualizar y descargar el fichero CSV de Apercibimientos y Comunicaciones</strong><br>
-    </li>
+    <li><a href="Apercibimientos.html">Actualizar o arquivo de apercibimentos</a> coa data de acuse de recibo.</li>
 </ol>
 
 </body>
